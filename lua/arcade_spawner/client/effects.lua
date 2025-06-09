@@ -53,8 +53,8 @@ local function CreateSafeEmitter(pos, maxParticles)
     
     local success, emitter = pcall(ParticleEmitter, pos)
     if success and emitter then
+        -- Only SetNearClip is available on the emitter
         emitter:SetNearClip(24, 32)
-        emitter:SetFarClip(1000, 1200)
         
         -- Auto-cleanup
         timer.Simple(5, function()

@@ -12,7 +12,8 @@ HUD.SessionData = {
     sessionTime = 0,
     startTime = 0,
     enemiesRemaining = 0,
-    enemiesTarget = 10
+    enemiesTarget = 10,
+    isBossWave = false
 }
 HUD.Notifications = {}
 HUD.FontsCreated = false
@@ -21,6 +22,7 @@ HUD.Initialized = false
 HUD.NetworkInitialized = false
 HUD.DirectionIndicators = {}
 HUD.LastDamageTime = {}
+HUD.MaxTrackerDistance = 4000
 
 -- ═══════════════════════════════════════════════════════════════
 -- ENHANCED AUTO-INITIALIZATION SYSTEM
@@ -129,11 +131,12 @@ function HUD.InitializeNetworking()
             local wave = net.ReadInt(16)
             local target = net.ReadInt(16)
             local isBoss = net.ReadBool()
-            
+
             HUD.SessionData.currentWave = wave
             HUD.SessionData.enemiesTarget = target
             HUD.SessionData.enemiesRemaining = target
-            
+            HUD.SessionData.isBossWave = isBoss
+
             if isBoss then
                 HUD.AddNotification(">>> BOSS WAVE " .. wave .. " INCOMING! <<<", Color(255, 50, 50), 5)
             else
@@ -223,7 +226,7 @@ function HUD.UpdateEnemyTracker()
             local enemyPos = ent:GetPos()
             local distance = playerPos:Distance(enemyPos)
             
-            if distance <= 2500 then
+            if distance <= HUD.MaxTrackerDistance then
                 local direction = (enemyPos - playerPos):GetNormalized()
                 local angle = math.deg(math.atan2(direction.y, direction.x))
                 local relativeAngle = angle - playerAng.y
@@ -260,7 +263,7 @@ function HUD.UpdateDirectionIndicators()
         -- Player took damage, find nearest enemy for damage indicator
         if #HUD.EnemyTracker > 0 then
             local closest = HUD.EnemyTracker[1]
-            if closest.distance <= 1500 then
+            if closest.distance <= HUD.MaxTrackerDistance then
                 table.insert(HUD.DirectionIndicators, {
                     angle = closest.angle,
                     type = "damage",
@@ -289,6 +292,20 @@ function HUD.UpdateDirectionIndicators()
                 endTime = currentTime + 0.2
             })
         end
+    end
+
+    -- Always indicate the closest enemy
+    if HUD.EnemyTracker[1] then
+        local nearest = HUD.EnemyTracker[1]
+        table.insert(HUD.DirectionIndicators, {
+            angle = nearest.angle,
+            type = "nearest",
+            intensity = 1.0,
+            distance = nearest.distance,
+            rarity = nearest.rarity,
+            color = HUD.GetRarityColor(nearest.rarity),
+            endTime = currentTime + 0.2
+        })
     end
     
     -- Clean up expired indicators
@@ -384,9 +401,11 @@ function HUD.DrawMainInfo(scrW, scrH)
     draw.SimpleText("=== ARCADE MODE ===", "ArcadeHUD_Title", padding + 15, padding + 15, 
                    Color(255, 255, 255), TEXT_ALIGN_LEFT)
     
-    local waveText = string.format("WAVE: %d", HUD.SessionData.currentWave)
-    draw.SimpleText(waveText, "ArcadeHUD_Medium", padding + 15, padding + 45, 
-                   Color(255, 215, 0), TEXT_ALIGN_LEFT)
+    local waveLabel = HUD.SessionData.isBossWave and "BOSS" or tostring(HUD.SessionData.currentWave)
+    local waveColor = HUD.SessionData.isBossWave and Color(255, 60, 60) or Color(255, 215, 0)
+    local waveText = string.format("WAVE: %s", waveLabel)
+    draw.SimpleText(waveText, "ArcadeHUD_Medium", padding + 15, padding + 45,
+                   waveColor, TEXT_ALIGN_LEFT)
     
     local killText = string.format("KILLS: %d", HUD.SessionData.enemiesKilled)
     draw.SimpleText(killText, "ArcadeHUD_Medium", padding + 15, padding + 70, 
@@ -507,9 +526,14 @@ function HUD.DrawDirectionIndicators(scrW, scrH)
             -- Distance text for close enemies
             if indicator.distance and indicator.distance <= 400 then
                 local distText = string.format("%dm", math.floor(indicator.distance / 50))
-                draw.SimpleText(distText, "ArcadeHUD_Small", x, y + 25, 
+                draw.SimpleText(distText, "ArcadeHUD_Small", x, y + 25,
                                Color(255, 255, 255, alpha * 0.8), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
+        elseif indicator.type == "nearest" then
+            local arrow = HUD.GetDirectionalIndicator(indicator.angle)
+            local nx = centerX + math.cos(rad) * (radius - 30)
+            local ny = centerY + math.sin(rad) * (radius - 30)
+            draw.SimpleText(arrow, "ArcadeHUD_Large", nx, ny, color, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
     end
     

@@ -37,6 +37,7 @@ local function ForceInitialize()
         AddCSLuaFile("arcade_spawner/client/hud.lua")
         AddCSLuaFile("arcade_spawner/client/health_bars.lua")
         AddCSLuaFile("arcade_spawner/client/effects.lua")
+        AddCSLuaFile("arcade_spawner/client/damage_numbers.lua")
         AddCSLuaFile("arcade_spawner/core/config.lua")
         
         -- Create console variables with enhanced defaults
@@ -59,6 +60,7 @@ local function ForceInitialize()
         SafeInclude("arcade_spawner/client/hud.lua")
         SafeInclude("arcade_spawner/client/health_bars.lua")
         SafeInclude("arcade_spawner/client/effects.lua")
+        SafeInclude("arcade_spawner/client/damage_numbers.lua")
         
         print("[Arcade Spawner] 🎯 Client systems initialized!")
     end
@@ -192,10 +194,21 @@ if SERVER then
     
     concommand.Add("arcade_validate_workshop", function(ply, cmd, args)
         if IsValid(ply) and not ply:IsAdmin() then return end
-        
-        if ArcadeSpawner.EnemyManager and ArcadeSpawner.EnemyManager.ScanWorkshopModels then
-            local count = ArcadeSpawner.EnemyManager.ScanWorkshopModels()
-            local msg = "🔍 Workshop scan complete: " .. count .. " models validated"
+
+        if ArcadeSpawner.EnemyManager and ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels then
+            ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels()
+            local msg = "🔍 Workshop scan started"
+            print("[Arcade Spawner] " .. msg)
+            if IsValid(ply) then ply:ChatPrint("[Arcade Spawner] " .. msg) end
+        end
+    end)
+
+    concommand.Add("arcade_rescan_models", function(ply, cmd, args)
+        if IsValid(ply) and not ply:IsAdmin() then return end
+
+        if ArcadeSpawner.EnemyManager and ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels then
+            ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels()
+            local msg = "🔍 Workshop rescan started"
             print("[Arcade Spawner] " .. msg)
             if IsValid(ply) then ply:ChatPrint("[Arcade Spawner] " .. msg) end
         end
