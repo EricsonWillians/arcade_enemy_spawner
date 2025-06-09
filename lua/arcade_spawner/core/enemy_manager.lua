@@ -659,6 +659,7 @@ function Manager.ApplyDynamicScaling(enemy, rarity, wave)
         
         enemy:SetMaxHealth(finalHealth)
         enemy:SetHealth(finalHealth)
+        enemy:SetNWInt("ArcadeMaxHP", finalHealth)
         
         -- Color and visual scaling
         enemy:SetColor(rarityData.color)
@@ -887,7 +888,8 @@ function Manager.AdvancedAIThink(enemy)
     enemy.LastMoveCheck = enemy.LastMoveCheck or CurTime()
     enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
     if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
-        if CurTime() - enemy.LastMoveCheck > 3 then
+        if CurTime() - enemy.LastMoveCheck > 2 then
+
             local patrol = Manager.GetRandomPatrolPoint(enemy)
             if patrol then Manager.MoveToPosition(enemy, patrol) end
             enemy.LastMoveCheck = CurTime()
@@ -1221,6 +1223,12 @@ function Manager.GetRandomPatrolPoint(enemy)
     local players = player.GetAll()
     if #players > 0 then
         local ply = table.Random(players)
+        local navs = navmesh.Find(ply:GetPos(), 1000, 20, 200, 4000)
+        if navs and #navs > 0 then
+            local area = table.Random(navs)
+            return area:GetRandomPoint()
+        end
+
         local offset = VectorRand() * math.random(500, 1200)
         local pos = ply:GetPos() + offset
         if Manager.IsPositionValid(pos) then return pos end
@@ -1233,7 +1241,7 @@ function Manager.GetRandomPatrolPoint(enemy)
     end
 
     local offset = Vector(math.random(-800,800), math.random(-800,800), 0)
-
+  
     return enemy:GetPos() + offset
 end
 

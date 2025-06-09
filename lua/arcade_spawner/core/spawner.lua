@@ -23,6 +23,7 @@ Spawner.MapBounds = nil
 Spawner.LastPlayerPositions = {}
 Spawner.DynamicDifficulty = 1.0
 Spawner.WaveStartTime = 0
+Spawner.LastSentRemaining = -1
 
 -- Enhanced network strings
 util.AddNetworkString("ArcadeSpawner_SessionStart")
@@ -31,6 +32,7 @@ util.AddNetworkString("ArcadeSpawner_WaveStart")
 util.AddNetworkString("ArcadeSpawner_EnemyKilled")
 util.AddNetworkString("ArcadeSpawner_BossWave")
 util.AddNetworkString("ArcadeSpawner_WaveComplete")
+util.AddNetworkString("ArcadeSpawner_WaveInfo")
 
 -- ═══════════════════════════════════════════════════════════════
 -- INTELLIGENT SPAWN POINT GENERATION
@@ -454,6 +456,16 @@ function ArcadeSpawner.StartSession()
     net.WriteInt(Spawner.WaveEnemiesTarget, 16)
     net.WriteBool(false) -- Not a boss wave
     net.Broadcast()
+
+    net.Start("ArcadeSpawner_WaveInfo")
+    net.WriteInt(Spawner.CurrentWave, 16)
+    net.WriteInt(Spawner.WaveEnemiesTarget, 16)
+    net.WriteInt(Spawner.WaveEnemiesTarget, 16)
+    net.Broadcast()
+
+    Spawner.LastSentRemaining = Spawner.WaveEnemiesTarget
+
+    Spawner.LastSentRemaining = Spawner.WaveEnemiesTarget
     
     print("[Arcade Spawner] ✅ Session started! Wave 1 target: " .. Spawner.WaveEnemiesTarget)
     return true
@@ -609,6 +621,15 @@ function Spawner.ManageWaveProgression()
     -- FIXED: Accurate remaining calculation
     local enemiesRemaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
     Spawner.WaveEnemiesRemaining = enemiesRemaining
+
+    if enemiesRemaining ~= Spawner.LastSentRemaining then
+        Spawner.LastSentRemaining = enemiesRemaining
+        net.Start("ArcadeSpawner_WaveInfo")
+        net.WriteInt(Spawner.CurrentWave, 16)
+        net.WriteInt(enemiesRemaining, 16)
+        net.WriteInt(Spawner.WaveEnemiesTarget, 16)
+        net.Broadcast()
+    end
     
     -- Track enemy count for HUD updates
     if aliveEnemies ~= Spawner.LastAliveCount then
@@ -651,6 +672,12 @@ function Spawner.StartNextWave()
     net.WriteInt(Spawner.WaveEnemiesTarget, 16)
     net.WriteBool(isBossWave)
     net.Broadcast()
+
+    net.Start("ArcadeSpawner_WaveInfo")
+    net.WriteInt(Spawner.CurrentWave, 16)
+    net.WriteInt(Spawner.WaveEnemiesTarget, 16)
+    net.WriteInt(Spawner.WaveEnemiesTarget, 16)
+    net.Broadcast()
     
     if isBossWave then
         net.Start("ArcadeSpawner_BossWave")
@@ -662,7 +689,16 @@ end
 function Spawner.HandleWaveComplete()
     local completionTime = CurTime() - (Spawner.WaveStartTime or CurTime())
     Spawner.UpdateDynamicDifficulty(completionTime)
+
     Spawner.WaveEnemiesRemaining = 0
+
+    net.Start("ArcadeSpawner_WaveInfo")
+    net.WriteInt(Spawner.CurrentWave, 16)
+    net.WriteInt(0, 16)
+    net.WriteInt(Spawner.WaveEnemiesTarget, 16)
+    net.Broadcast()
+
+    Spawner.LastSentRemaining = 0
 
     net.Start("ArcadeSpawner_WaveComplete")
     net.WriteInt(Spawner.CurrentWave, 16)

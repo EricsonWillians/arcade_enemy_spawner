@@ -206,6 +206,15 @@ function HUD.InitializeNetworking()
             
             print("[Arcade Spawner] 📡 Enemy killed! Remaining: " .. HUD.SessionData.enemiesRemaining)
         end,
+
+        ["ArcadeSpawner_WaveInfo"] = function()
+            local wave = net.ReadInt(16)
+            local remaining = net.ReadInt(16)
+            local target = net.ReadInt(16)
+            HUD.SessionData.currentWave = wave
+            HUD.SessionData.enemiesRemaining = remaining
+            HUD.SessionData.enemiesTarget = target
+        end,
         
         ["ArcadeSpawner_PlayerXP"] = function()
             HUD.PlayerData.xp = net.ReadInt(32)
