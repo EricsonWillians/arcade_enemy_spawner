@@ -48,12 +48,14 @@ function Manager.CollectWorkshopModels()
     end
 
     -- Recursively search the models folder for additional .mdl files
+    local maxModels = ArcadeSpawner.Config.MaxWorkshopModels or 100
     local function AddModelsFromPath(path, depth)
         depth = depth or 0
-        if depth > 5 then return end
+        if depth > 5 or #workshopModels >= maxModels then return end
 
         local files, dirs = file.Find(path .. "*.mdl", "GAME")
         for _, f in ipairs(files) do
+            if #workshopModels >= maxModels then return end
             local modelPath = path .. f
             if not Manager.IsVanillaModel(modelPath) then
                 table.insert(workshopModels, {
@@ -66,7 +68,10 @@ function Manager.CollectWorkshopModels()
 
         local _, subdirs = file.Find(path .. "*", "GAME")
         for _, d in ipairs(subdirs) do
-            AddModelsFromPath(path .. d .. "/", depth + 1)
+            if d ~= "." and d ~= ".." then
+                AddModelsFromPath(path .. d .. "/", depth + 1)
+                if #workshopModels >= maxModels then return end
+            end
         end
     end
 
