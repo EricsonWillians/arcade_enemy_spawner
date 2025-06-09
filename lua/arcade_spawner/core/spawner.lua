@@ -24,6 +24,7 @@ Spawner.LastPlayerPositions = {}
 Spawner.DynamicDifficulty = 1.0
 Spawner.WaveStartTime = 0
 Spawner.LastSentRemaining = -1
+Spawner.SpawningEnabled = false
 
 -- Enhanced network strings
 util.AddNetworkString("ArcadeSpawner_SessionStart")
@@ -429,6 +430,7 @@ function ArcadeSpawner.StartSession()
     Spawner.DynamicDifficulty = 1.0
     Spawner.ActiveEnemies = {}
     Spawner.LastBossWave = 0
+    Spawner.SpawningEnabled = true
     
     -- Calculate wave target
     Spawner.WaveEnemiesTarget = Spawner.CalculateWaveTarget(1)
@@ -475,6 +477,7 @@ function ArcadeSpawner.StopSession()
     if not Spawner.Active then return end
     
     Spawner.Active = false
+    Spawner.SpawningEnabled = false
     
     -- Remove timers
     timer.Remove("ArcadeSpawner_MainSpawnLoop")
@@ -558,6 +561,7 @@ function Spawner.ExecuteSpawnCycle()
 end
 
 function Spawner.SpawnIntelligentEnemy()
+    if not Spawner.SpawningEnabled then return end
     if Spawner.WaveEnemiesSpawned >= Spawner.WaveEnemiesTarget then return end
 
     -- Select optimal spawn point
@@ -659,6 +663,7 @@ function Spawner.StartNextWave()
     Spawner.WaveEnemiesTarget = Spawner.CalculateWaveTarget(Spawner.CurrentWave)
     Spawner.WaveEnemiesRemaining = Spawner.WaveEnemiesTarget
     Spawner.WaveStartTime = CurTime()
+    Spawner.SpawningEnabled = true
     
     local isBossWave = Spawner.IsBossWave(Spawner.CurrentWave)
     
@@ -698,6 +703,8 @@ function Spawner.HandleWaveComplete()
     Spawner.UpdateDynamicDifficulty(completionTime)
 
     Spawner.WaveEnemiesRemaining = 0
+    Spawner.WaveEnemiesSpawned = Spawner.WaveEnemiesTarget
+    Spawner.SpawningEnabled = false
 
     net.Start("ArcadeSpawner_WaveInfo")
     net.WriteInt(Spawner.CurrentWave, 16)
