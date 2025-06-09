@@ -405,6 +405,22 @@ function Manager.BuildSafeModelCache()
                 validated = true
             })
             validCount = validCount + 1
+
+        local info = util.GetModelInfo(modelPath)
+        if not info or not info.AnimationData or not info.AnimationData.sequences then
+            error("No sequence info")
+        else
+            local hasIdle = false
+            for _, seq in ipairs(info.AnimationData.sequences) do
+                if seq.label and string.find(string.lower(seq.label), "idle") then
+                    hasIdle = true
+                    break
+                end
+            end
+            if not hasIdle then
+                error("Missing idle animation")
+            end
+        end
         else
             print("[Arcade Spawner] ⚠️ Invalid vanilla model: " .. modelData.model)
         end
@@ -555,6 +571,9 @@ function Manager.CreateAdvancedEnemy(pos, wave, forceRarity, attempt)
             else
                 print("[Arcade Spawner] ⚠️ Invalid NPC class '" .. npcClass .. "', using npc_citizen")
             end
+            print("[Arcade Spawner] ⚠️ Missing idle sequence for " .. modelData.model)
+            SafeRemoveEntity(enemy)
+            enemy = nil
             npcClass = "npc_citizen"
         end
 
