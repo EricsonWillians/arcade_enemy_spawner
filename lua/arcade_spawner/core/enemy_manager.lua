@@ -127,11 +127,11 @@ function Manager.AsyncScanWorkshopModels()
         end
 
         index = index + 1
-
         net.Start("ArcadeSpawner_WorkshopProgress")
         net.WriteInt(math.min(validated + rejected, total), 16)
         net.WriteInt(total, 16)
         net.Broadcast()
+
     end)
 end
 
