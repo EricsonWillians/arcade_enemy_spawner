@@ -764,7 +764,7 @@ function Manager.SetupAdvancedAI(enemy)
         enemy.AimPredictionEnabled = ArcadeSpawner.Config.AISettings.AimPrediction
         enemy.LastPosition = enemy:GetPos()
         enemy.StuckCounter = 0
-        enemy.NextPatrolUpdate = CurTime() + math.Rand(1, 2)
+        enemy.NextPatrolUpdate = CurTime() + math.Rand(0.5, 1.0)
         
         -- Movement speed enhancement
         if enemy.SpeedMultiplier then

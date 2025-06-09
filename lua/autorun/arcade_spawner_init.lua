@@ -50,6 +50,7 @@ local function ForceInitialize()
         CreateConVar("arcade_workshop_validation", "1", FCVAR_ARCHIVE, "Enable workshop model validation")
         CreateConVar("arcade_auto_start", "0", FCVAR_ARCHIVE, "Automatically start session on map load")
         CreateConVar("arcade_auto_hud", "1", FCVAR_ARCHIVE, "Auto-initialize HUD on map load")
+        CreateConVar("arcade_creepy_fx", "1", FCVAR_ARCHIVE, "Enable creepy ambience effects")
         SafeInclude("arcade_spawner/server/loot_system.lua")
         
         print("[Arcade Spawner] 🎮 Server systems initialized!")
@@ -62,6 +63,8 @@ local function ForceInitialize()
         SafeInclude("arcade_spawner/client/health_bars.lua")
         SafeInclude("arcade_spawner/client/effects.lua")
         SafeInclude("arcade_spawner/client/damage_numbers.lua")
+        CreateClientConVar("arcade_creepy_fx", "1", true, false, "Enable creepy ambience effects")
+
         
         print("[Arcade Spawner] 🎯 Client systems initialized!")
     end

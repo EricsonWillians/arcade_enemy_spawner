@@ -23,6 +23,38 @@ HUD.NetworkInitialized = false
 HUD.DirectionIndicators = {}
 HUD.LastDamageTime = {}
 HUD.MaxTrackerDistance = 4000
+HUD.AmbientSound = nil
+
+function HUD.StartAmbience()
+    if HUD.AmbientSound or not GetConVar("arcade_creepy_fx"):GetBool() then return end
+    if not LocalPlayer or not IsValid(LocalPlayer()) then return end
+
+    HUD.AmbientSound = CreateSound(LocalPlayer(), "ambient/halloween/ghosts.wav")
+    if HUD.AmbientSound then
+        HUD.AmbientSound:PlayEx(0.5, 90)
+    end
+
+    ArcadeSpawner.Effects = ArcadeSpawner.Effects or {}
+    ArcadeSpawner.Effects.ScreenEffects.ambience = {
+        effect = {
+            ["$pp_colour_brightness"] = -0.05,
+            ["$pp_colour_contrast"] = 1.1,
+            ["$pp_colour_colour"] = 0.6
+        },
+        endTime = math.huge,
+        fadeTime = 2
+    }
+end
+
+function HUD.StopAmbience()
+    if HUD.AmbientSound then
+        HUD.AmbientSound:Stop()
+        HUD.AmbientSound = nil
+    end
+    if ArcadeSpawner and ArcadeSpawner.Effects and ArcadeSpawner.Effects.ScreenEffects then
+        ArcadeSpawner.Effects.ScreenEffects.ambience = nil
+    end
+end
 
 -- ═══════════════════════════════════════════════════════════════
 -- ENHANCED AUTO-INITIALIZATION SYSTEM
@@ -108,6 +140,7 @@ function HUD.InitializeNetworking()
             HUD.SessionData.currentWave = 1
             HUD.SessionData.enemiesRemaining = net.ReadInt(16) or 10
             HUD.SessionData.enemiesTarget = HUD.SessionData.enemiesRemaining
+            HUD.StartAmbience()
             HUD.AddNotification(">>> ARCADE MODE ACTIVATED <<<", Color(0, 255, 0), 4)
             print("[Arcade Spawner] 📡 Session started! Target: " .. HUD.SessionData.enemiesTarget)
         end,
@@ -116,8 +149,9 @@ function HUD.InitializeNetworking()
             local kills = net.ReadInt(32)
             local wave = net.ReadInt(16)
             local sessionTime = net.ReadInt(16)
-            
+
             HUD.SessionActive = false
+            HUD.StopAmbience()
             
             local minutes = math.floor(sessionTime / 60)
             local seconds = sessionTime % 60
