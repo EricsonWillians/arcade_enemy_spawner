@@ -37,6 +37,7 @@ local function ForceInitialize()
         AddCSLuaFile("arcade_spawner/client/hud.lua")
         AddCSLuaFile("arcade_spawner/client/health_bars.lua")
         AddCSLuaFile("arcade_spawner/client/effects.lua")
+        AddCSLuaFile("arcade_spawner/client/damage_numbers.lua")
         AddCSLuaFile("arcade_spawner/core/config.lua")
         
         -- Create console variables with enhanced defaults
@@ -59,6 +60,7 @@ local function ForceInitialize()
         SafeInclude("arcade_spawner/client/hud.lua")
         SafeInclude("arcade_spawner/client/health_bars.lua")
         SafeInclude("arcade_spawner/client/effects.lua")
+        SafeInclude("arcade_spawner/client/damage_numbers.lua")
         
         print("[Arcade Spawner] 🎯 Client systems initialized!")
     end
