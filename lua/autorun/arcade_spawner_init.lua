@@ -63,8 +63,8 @@ local function ForceInitialize()
         SafeInclude("arcade_spawner/client/health_bars.lua")
         SafeInclude("arcade_spawner/client/effects.lua")
         SafeInclude("arcade_spawner/client/damage_numbers.lua")
-        CreateClientConVar("arcade_creepy_fx", "1", true, false, "Enable creepy ambience effects")
 
+        CreateClientConVar("arcade_creepy_fx", "1", true, false, "Enable creepy ambience effects")
         
         print("[Arcade Spawner] 🎯 Client systems initialized!")
     end

@@ -500,6 +500,12 @@ function Manager.CreateAdvancedEnemy(pos, wave, forceRarity, attempt)
         enemy:SetModel(modelData.model)
         enemy:Spawn()
         enemy:Activate()
+
+        -- Validate animation sequences to avoid T-poses
+        local idleSeq = enemy:SelectWeightedSequence(ACT_IDLE)
+        if idleSeq <= 0 then
+            error("Model missing idle sequence")
+        end
         
         -- IMMEDIATE validation after spawn
         if not IsValid(enemy) or not enemy:Alive() then
@@ -818,6 +824,20 @@ function Manager.AdvancedAIThink(enemy)
     -- Squad tactics decision making
     local behavior = Manager.DetermineSquadBehavior(enemy, nearestPlayer, distance, canSeePlayer)
     Manager.ExecuteAIBehavior(enemy, behavior, nearestPlayer)
+
+    -- Encourage wandering if idle for too long
+    enemy.LastMoveCheck = enemy.LastMoveCheck or CurTime()
+    enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
+    if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
+        if CurTime() - enemy.LastMoveCheck > 5 then
+            local patrol = Manager.GetRandomPatrolPoint(enemy)
+            if patrol then Manager.MoveToPosition(enemy, patrol) end
+            enemy.LastMoveCheck = CurTime()
+        end
+    else
+        enemy.LastCheckedPos = enemy:GetPos()
+        enemy.LastMoveCheck = CurTime()
+    end
     
     -- Anti-stuck system
     Manager.CheckAndHandleStuck(enemy)
@@ -1079,6 +1099,9 @@ function Manager.IsPositionValidAdvanced(pos)
     return not finalTrace.StartSolid
 end
 
+-- Simple alias for general validity checks
+Manager.IsPositionValid = Manager.IsPositionValidAdvanced
+
 function Manager.DetermineRarity(wave)
     local roll = math.random(1, 100)
     local waveBonus = math.min(wave * 2, 30) -- Increase rare spawns with wave
@@ -1137,11 +1160,14 @@ function Manager.MoveToPosition(enemy, targetPos)
 end
 
 function Manager.GetRandomPatrolPoint(enemy)
-    local areas = navmesh.GetAllNavAreas()
-    if areas and #areas > 0 then
-        local area = table.Random(areas)
-        return area:GetCenter()
+    local players = player.GetAll()
+    if #players > 0 then
+        local ply = table.Random(players)
+        local offset = VectorRand() * math.random(300, 800)
+        local pos = ply:GetPos() + offset
+        if Manager.IsPositionValid(pos) then return pos end
     end
+
     local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
     return enemy:GetPos() + offset
 end

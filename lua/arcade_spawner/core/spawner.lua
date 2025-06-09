@@ -29,6 +29,7 @@ util.AddNetworkString("ArcadeSpawner_SessionEnd")
 util.AddNetworkString("ArcadeSpawner_WaveStart")
 util.AddNetworkString("ArcadeSpawner_EnemyKilled")
 util.AddNetworkString("ArcadeSpawner_BossWave")
+util.AddNetworkString("ArcadeSpawner_WaveComplete")
 
 -- ═══════════════════════════════════════════════════════════════
 -- INTELLIGENT SPAWN POINT GENERATION
@@ -656,6 +657,10 @@ end
 function Spawner.HandleWaveComplete()
     local completionTime = CurTime() - (Spawner.WaveStartTime or CurTime())
     Spawner.UpdateDynamicDifficulty(completionTime)
+    net.Start("ArcadeSpawner_WaveComplete")
+    net.WriteInt(Spawner.CurrentWave, 16)
+    net.Broadcast()
+
     timer.Simple(3, function()
         if Spawner.Active then
             Spawner.StartNextWave()
@@ -721,14 +726,23 @@ end
 
 function Spawner.SelectOptimalSpawnPoint()
     if #Spawner.SpawnPoints == 0 then return nil end
-    
+
     -- Filter available points
     local availablePoints = {}
-    
+    local players = Spawner.LastPlayerPositions or {}
+
     for _, point in ipairs(Spawner.SpawnPoints) do
         if Spawner.IsSpawnPointAvailable(point.pos) then
             -- Add multiple entries based on quality for weighted selection
             local weight = math.max(math.floor(point.quality or 5), 1)
+
+            -- Bias toward points closer to players but outside min distance
+            for _, pPos in ipairs(players) do
+                local dist = point.pos:Distance(pPos)
+                if dist < 1000 then weight = weight + 2 end
+                if dist < 600 then weight = weight + 1 end
+            end
+
             for i = 1, weight do
                 table.insert(availablePoints, point)
             end
