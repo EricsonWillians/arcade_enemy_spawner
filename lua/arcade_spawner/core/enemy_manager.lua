@@ -132,6 +132,7 @@ function Manager.AsyncScanWorkshopModels()
         net.WriteInt(math.min(validated + rejected, total), 16)
         net.WriteInt(total, 16)
         net.Broadcast()
+
     end)
 end
 
@@ -1232,6 +1233,8 @@ function Manager.GetRandomPatrolPoint(enemy)
     end
 
     local offset = Vector(math.random(-800,800), math.random(-800,800), 0)
+    local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
+
     return enemy:GetPos() + offset
 end
 
