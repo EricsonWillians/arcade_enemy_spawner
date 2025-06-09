@@ -56,10 +56,10 @@ local function UpdateEnemyCache()
             local distance = playerPos:Distance(ent:GetPos())
             
             if distance <= HEALTH_BAR_CONFIG.maxDistance then
-                local health = ent:Health()
-                local maxHealth = ent:GetMaxHealth()
-                
-                if health > 0 and maxHealth > 0 then
+                local health = math.max(ent:Health(), 0)
+                local maxHealth = math.max(ent:GetMaxHealth(), 1)
+
+                if health > 0 then
                     table.insert(HealthBars.EnemyCache, {
                         entity = ent,
                         distance = distance,
@@ -193,10 +193,6 @@ hook.Add("HUDPaint", "ArcadeSpawner_HealthBars", function()
     UpdateEnemyCache()
     
     if #HealthBars.EnemyCache == 0 then return end
-    
-    -- Set up 3D context
-    cam.Start3D()
-    cam.End3D()
     
     -- Draw all health bars
     for _, enemyData in ipairs(HealthBars.EnemyCache) do

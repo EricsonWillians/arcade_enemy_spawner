@@ -14,6 +14,7 @@ Spawner.CurrentWave = 1
 Spawner.EnemiesKilled = 0
 Spawner.ActiveEnemies = {}
 Spawner.WaveEnemiesSpawned = 0
+Spawner.WaveEnemiesKilled = 0
 Spawner.WaveEnemiesTarget = 10
 Spawner.SessionStartTime = 0
 Spawner.LastBossWave = 0
@@ -418,6 +419,7 @@ function ArcadeSpawner.StartSession()
     Spawner.CurrentWave = 1
     Spawner.EnemiesKilled = 0
     Spawner.WaveEnemiesSpawned = 0
+    Spawner.WaveEnemiesKilled = 0
     Spawner.SessionStartTime = CurTime()
     Spawner.WaveStartTime = CurTime()
     Spawner.DynamicDifficulty = 1.0
@@ -510,7 +512,7 @@ function Spawner.InitializeSpawnSystem()
         if Spawner.Active then
             for i = 1, 4 do
                 timer.Simple(i * 0.8, function()
-                    if Spawner.Active then
+                    if Spawner.Active and Spawner.WaveEnemiesSpawned < Spawner.WaveEnemiesTarget then
                         Spawner.SpawnIntelligentEnemy()
                     end
                 end)
@@ -546,6 +548,8 @@ function Spawner.ExecuteSpawnCycle()
 end
 
 function Spawner.SpawnIntelligentEnemy()
+    if Spawner.WaveEnemiesSpawned >= Spawner.WaveEnemiesTarget then return end
+
     -- Select optimal spawn point
     local spawnPoint = Spawner.SelectOptimalSpawnPoint()
     if not spawnPoint then
@@ -605,15 +609,15 @@ function Spawner.ManageWaveProgression()
     Spawner.ActiveEnemies = validEnemies
     
     -- FIXED: Accurate remaining calculation
-    local enemiesRemaining = math.max(0, (Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesSpawned) + aliveEnemies)
+    local enemiesRemaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
     
     -- Track enemy count for HUD updates
     if aliveEnemies ~= Spawner.LastAliveCount then
         Spawner.LastAliveCount = aliveEnemies
     end
     
-    -- Check wave completion: all spawned AND all killed
-    local waveComplete = (Spawner.WaveEnemiesSpawned >= Spawner.WaveEnemiesTarget) and (aliveEnemies == 0)
+    -- Check wave completion
+    local waveComplete = (Spawner.WaveEnemiesKilled >= Spawner.WaveEnemiesTarget) and (aliveEnemies == 0)
     
     if waveComplete then
         print("[Arcade Spawner] 🌊 Wave " .. Spawner.CurrentWave .. " COMPLETE!")
@@ -624,6 +628,7 @@ end
 function Spawner.StartNextWave()
     Spawner.CurrentWave = Spawner.CurrentWave + 1
     Spawner.WaveEnemiesSpawned = 0
+    Spawner.WaveEnemiesKilled = 0
     Spawner.WaveEnemiesTarget = Spawner.CalculateWaveTarget(Spawner.CurrentWave)
     Spawner.WaveStartTime = CurTime()
     
@@ -830,6 +835,7 @@ end
 hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inflictor)
     if IsValid(npc) and npc.IsArcadeEnemy and Spawner.Active then
         Spawner.EnemiesKilled = Spawner.EnemiesKilled + 1
+        Spawner.WaveEnemiesKilled = (Spawner.WaveEnemiesKilled or 0) + 1
         
         -- Handle XP if player killed
         local xp = 30
@@ -841,16 +847,19 @@ hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inf
         end
         
         -- FIXED: Notify clients with comprehensive data
+        local remaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
+
         net.Start("ArcadeSpawner_EnemyKilled")
         net.WriteInt(Spawner.EnemiesKilled, 32)        -- Total kills
         net.WriteInt(Spawner.CurrentWave, 16)          -- Current wave
         net.WriteInt(xp, 16)                           -- XP gained
         net.WriteBool(npc.RarityType == "Mythic")      -- Is boss
+        net.WriteInt(remaining, 16)                    -- Remaining enemies
         net.Broadcast()
         
-        print("[Arcade Spawner] Enemy killed! Total: " .. Spawner.EnemiesKilled .. 
-              " | Wave: " .. Spawner.CurrentWave .. 
-              " | Remaining: " .. (Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesSpawned))
+        print("[Arcade Spawner] Enemy killed! Total: " .. Spawner.EnemiesKilled ..
+              " | Wave: " .. Spawner.CurrentWave ..
+              " | Remaining: " .. remaining)
     end
 end)
 

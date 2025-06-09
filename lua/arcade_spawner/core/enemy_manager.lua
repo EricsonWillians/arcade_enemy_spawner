@@ -864,6 +864,9 @@ function Manager.DetermineSquadBehavior(enemy, player, distance, canSeePlayer)
     elseif distance < config.ChaseRadius then
         return "chase"
     elseif enemy.LastKnownPlayerPos and CurTime() - enemy.LastPlayerSeen < 10 then
+        if enemy.LastKnownPlayerPos == vector_origin then
+            return "patrol"
+        end
         return "search"
     else
         return "patrol"
@@ -902,7 +905,7 @@ function Manager.ExecuteAIBehavior(enemy, behavior, player)
             enemy:SetSchedule(SCHED_CHASE_ENEMY)
             
         elseif behavior == "search" then
-            if enemy.LastKnownPlayerPos then
+            if enemy.LastKnownPlayerPos and enemy.LastKnownPlayerPos ~= vector_origin then
                 Manager.MoveToPosition(enemy, enemy.LastKnownPlayerPos)
             else
                 enemy:SetSchedule(SCHED_IDLE_WANDER)

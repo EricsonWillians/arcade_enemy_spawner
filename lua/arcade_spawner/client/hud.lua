@@ -151,10 +151,11 @@ function HUD.InitializeNetworking()
             local currentWave = net.ReadInt(16)
             local xp = net.ReadInt(16)
             local isBoss = net.ReadBool()
-            
+            local remaining = net.ReadInt(16)
+
             HUD.SessionData.enemiesKilled = totalKills
             HUD.SessionData.currentWave = currentWave
-            HUD.SessionData.enemiesRemaining = math.max(0, HUD.SessionData.enemiesRemaining - 1)
+            HUD.SessionData.enemiesRemaining = remaining
             
             if isBoss then
                 HUD.AddNotification(">>> BOSS DEFEATED! <<<", Color(255, 215, 0), 3)
