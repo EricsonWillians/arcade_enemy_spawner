@@ -431,7 +431,7 @@ hook.Add("PostDrawOpaqueRenderables", "ArcadeSpawner_EnhancedGlow", function()
         local currentTime = CurTime()
         
         for _, ent in ipairs(ents.GetAll()) do
-            if IsValid(ent) and ent.IsArcadeEnemy and ent.RarityType and ent.RarityType != "Common" then
+            if IsValid(ent) and ent.IsArcadeEnemy and ent.RarityType and ent.RarityType ~= "Common" then
                 local glowColors = {
                     ["Uncommon"] = {color = Color(30, 255, 30), intensity = 15},
                     ["Rare"] = {color = Color(30, 144, 255), intensity = 25},
