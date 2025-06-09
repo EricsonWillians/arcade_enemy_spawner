@@ -688,7 +688,7 @@ function Manager.SetupEnemyRelationships(enemy)
         
         -- Make ALL arcade enemies neutral to each other
         for _, ent in pairs(ents.GetAll()) do
-            if IsValid(ent) and ent.IsArcadeEnemy and ent != enemy then
+            if IsValid(ent) and ent.IsArcadeEnemy and ent ~= enemy then
                 enemy:AddEntityRelationship(ent, D_NU, 0)
                 ent:AddEntityRelationship(enemy, D_NU, 0)
             end
@@ -723,6 +723,7 @@ function Manager.SetupAdvancedAI(enemy)
         enemy.AimPredictionEnabled = ArcadeSpawner.Config.AISettings.AimPrediction
         enemy.LastPosition = enemy:GetPos()
         enemy.StuckCounter = 0
+        enemy.NextPatrolUpdate = CurTime() + math.Rand(1, 2)
         
         -- Movement speed enhancement
         if enemy.SpeedMultiplier then
@@ -871,7 +872,7 @@ function Manager.ExecuteAIBehavior(enemy, behavior, player)
                 if patrolPos then
                     Manager.MoveToPosition(enemy, patrolPos)
                 end
-                enemy.NextPatrolUpdate = CurTime() + 5
+                enemy.NextPatrolUpdate = CurTime() + 3
             end
         end
     end)

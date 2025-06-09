@@ -570,13 +570,6 @@ function Spawner.SpawnIntelligentEnemy()
         table.insert(Spawner.ActiveEnemies, enemy)
         Spawner.WaveEnemiesSpawned = Spawner.WaveEnemiesSpawned + 1
 
-        net.Start("ArcadeSpawner_EnemyKilled")
-        net.WriteInt(Spawner.EnemiesKilled, 32)
-        net.WriteInt(Spawner.CurrentWave, 16)
-        net.WriteInt(0, 16)
-        net.WriteBool(false)
-        net.Broadcast()
-
         print("[Arcade Spawner] ✅ Spawned " .. (enemy.RarityType or "Common") ..
               " enemy (" .. Spawner.WaveEnemiesSpawned .. "/" .. Spawner.WaveEnemiesTarget .. ")")
         
@@ -614,17 +607,9 @@ function Spawner.ManageWaveProgression()
     -- FIXED: Accurate remaining calculation
     local enemiesRemaining = math.max(0, (Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesSpawned) + aliveEnemies)
     
-    -- Update HUD with accurate count
-    if aliveEnemies != Spawner.LastAliveCount then
-        net.Start("ArcadeSpawner_EnemyKilled")
-        net.WriteInt(Spawner.EnemiesKilled, 32)
-        net.WriteInt(Spawner.CurrentWave, 16) 
-        net.WriteInt(0, 16) -- XP (will be handled separately)
-        net.WriteBool(false) -- Not boss
-        net.Broadcast()
-        
+    -- Track enemy count for HUD updates
+    if aliveEnemies ~= Spawner.LastAliveCount then
         Spawner.LastAliveCount = aliveEnemies
-        print("[Arcade Spawner] 📡 Enemy killed! Remaining: " .. enemiesRemaining)
     end
     
     -- Check wave completion: all spawned AND all killed
