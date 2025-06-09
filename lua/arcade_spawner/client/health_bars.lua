@@ -65,7 +65,7 @@ local function UpdateEnemyCache()
                         distance = distance,
                         health = health,
                         maxHealth = maxHealth,
-                        healthPercent = health / maxHealth,
+                        healthPercent = math.Clamp(health / maxHealth, 0, 1),
                         rarity = ent.RarityType or "Common",
                         position = ent:GetPos() + HEALTH_BAR_CONFIG.offset
                     })
@@ -109,7 +109,7 @@ local function DrawHealthBar(enemyData)
     local pos = enemyData.position
     local screenPos = pos:ToScreen()
     
-    if not screenPos.visible then return end
+    if screenPos.visible == false then return end
     
     local distance = enemyData.distance
     local alpha = 255
