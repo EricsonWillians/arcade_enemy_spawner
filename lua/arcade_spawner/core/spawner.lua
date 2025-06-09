@@ -864,7 +864,8 @@ hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inf
             end
         end
         
-        -- Notify clients with comprehensive data
+        -- FIXED: Notify clients with comprehensive data
+
         local remaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
         Spawner.WaveEnemiesRemaining = remaining
 
