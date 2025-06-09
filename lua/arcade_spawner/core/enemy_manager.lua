@@ -41,9 +41,14 @@ function Manager.CollectWorkshopModels()
     if npcList then
         for className, data in pairs(npcList) do
             if data and data.Model and not Manager.IsVanillaModel(data.Model) then
+                local entInfo = scripted_ents.GetStored(className)
+                local npcClass = className
+                if not entInfo then
+                    npcClass = nil -- treat as generic model if entity not registered
+                end
                 table.insert(workshopModels, {
                     model = data.Model,
-                    npc = className,
+                    npc = npcClass,
                     source = "npc",
                     name = data.Name or className
                 })
@@ -543,8 +548,13 @@ function Manager.CreateAdvancedEnemy(pos, wave, forceRarity, attempt)
         
         -- Create NPC with validation and graceful fallback
         local npcClass = modelData.npc or "npc_citizen"
-        if not list.Get("NPC")[npcClass] and not scripted_ents.GetStored(npcClass) then
-            print("[Arcade Spawner] ⚠️ Invalid NPC class '" .. tostring(npcClass) .. "', using npc_citizen")
+        local entInfo = scripted_ents.GetStored(npcClass)
+        if not entInfo then
+            if list.Get("NPC")[npcClass] then
+                print("[Arcade Spawner] ⚠️ NPC class '" .. npcClass .. "' not registered, using npc_citizen")
+            else
+                print("[Arcade Spawner] ⚠️ Invalid NPC class '" .. npcClass .. "', using npc_citizen")
+            end
             npcClass = "npc_citizen"
         end
 
@@ -891,7 +901,6 @@ function Manager.AdvancedAIThink(enemy)
 
     -- Proactively seek players if none spotted recently
     if not canSeePlayer and CurTime() - (enemy.LastPlayerSeen or 0) > 4 then
-
         enemy.LastPlayerSeen = CurTime()
         local seek = Manager.GetRandomPatrolPoint(enemy)
         if seek then Manager.MoveToPosition(enemy, seek) end
@@ -906,7 +915,6 @@ function Manager.AdvancedAIThink(enemy)
     enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
     if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
         if CurTime() - enemy.LastMoveCheck > 1.5 then
-
             local patrol = Manager.GetRandomPatrolPoint(enemy)
             if patrol then Manager.MoveToPosition(enemy, patrol) end
             enemy.LastMoveCheck = CurTime()
