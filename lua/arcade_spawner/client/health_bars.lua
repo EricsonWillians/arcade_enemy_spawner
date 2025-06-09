@@ -56,7 +56,12 @@ local function UpdateEnemyCache()
             local distance = playerPos:Distance(ent:GetPos())
             
             if distance <= HEALTH_BAR_CONFIG.maxDistance then
-                local maxHealth = math.max(ent:GetNWInt("ArcadeMaxHP", ent:GetMaxHealth()), ent:Health(), 1)
+                local maxHealth = ent:GetNWInt("ArcadeMaxHP", ent:GetMaxHealth())
+                if maxHealth <= 0 then
+                    maxHealth = ent:GetMaxHealth()
+                end
+                if maxHealth <= 0 then maxHealth = 100 end
+                maxHealth = math.max(maxHealth, ent:Health(), 1)
 
                 local health = math.Clamp(ent:Health(), 0, maxHealth)
 

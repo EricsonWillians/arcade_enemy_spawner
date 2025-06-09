@@ -258,16 +258,26 @@ function Manager.TestModelProperties(model)
             return {valid = false, reason = "Health too high: " .. estimatedHealth}
         end
         
-        if estimatedHealth < config.MinHealthThreshold then
-            return {valid = false, reason = "Health too low: " .. estimatedHealth}
+
+    local idleSeqs = {"idle", "idle_all", "Idle01", "ACT_IDLE"}
+    local moveSeqs = {"walk", "run", "walk_all", "run_all"}
+
+    local hasIdle = false
+    local hasMove = false
+
+    for _, seq in ipairs(idleSeqs) do
+        if ent:LookupSequence(seq) >= 0 then
+            hasIdle = true
+            break
+
+    for _, seq in ipairs(moveSeqs) do
+        if ent:LookupSequence(seq) >= 0 then
+            hasMove = true
+            break
         end
-        
-        if not hasBasicSequences then
-            return {valid = false, reason = "Missing required animations"}
-        end
-        
-        return {
-            valid = true,
+    end
+
+    return hasIdle and hasMove
             size = size,
             mass = mass,
             health = estimatedHealth,
@@ -848,8 +858,8 @@ function Manager.StartAdvancedAI(enemy)
     timer.Create(thinkID, 0.2, 0, function()
         if not IsValid(enemy) or not enemy:Alive() then
             timer.Remove(thinkID)
-            return
-        end
+    if not canSeePlayer and CurTime() - (enemy.LastPlayerSeen or 0) > 4 then
+        if CurTime() - enemy.LastMoveCheck > 1.5 then
         
         Manager.AdvancedAIThink(enemy)
     end)
@@ -1196,7 +1206,7 @@ function Manager.CalculateFlankingPosition(enemy, player)
 end
 
 function Manager.FindCoverPosition(enemy, player)
-    local enemyPos = enemy:GetPos()
+        local navs = navmesh.Find(ply:GetPos(), 2000, 20, 200, 4000)
     local playerPos = player:GetPos()
     
     -- Find position behind cover
