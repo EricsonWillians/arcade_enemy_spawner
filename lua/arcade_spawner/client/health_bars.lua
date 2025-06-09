@@ -168,11 +168,16 @@ local function DrawHealthBar(enemyData)
     end
     
     -- Rarity indicator stripe
-    if rarity != "Common" then
+    if rarity ~= "Common" then
         local rarityColor = GetRarityColor(rarity)
         rarityColor.a = alpha * 0.8
         draw.RoundedBox(0, x, y - 3, w, 2, rarityColor)
     end
+
+    -- Hitpoint text
+    local hpText = string.format("%d/%d", enemyData.health, enemyData.maxHealth)
+    draw.SimpleText(hpText, "ArcadeHUD_Small", x + w / 2, y - 8,
+                   Color(255, 255, 255, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
     
     -- Damage indicators (optional)
     if enemyData.healthPercent < 0.3 then
