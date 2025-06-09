@@ -531,18 +531,12 @@ function Spawner.ExecuteSpawnCycle()
     local currentEnemies = #Spawner.ActiveEnemies
     
     if remainingInWave > 0 and currentEnemies < maxEnemies then
-        local spawnCount = math.min(
-            3, -- Max spawns per cycle
-            remainingInWave,
-            maxEnemies - currentEnemies
-        )
-        
+        local spawnCount = math.min(2, remainingInWave, maxEnemies - currentEnemies)
+
         for i = 1, spawnCount do
-            timer.Simple(i * 0.4, function()
-                if Spawner.Active then
-                    Spawner.SpawnIntelligentEnemy()
-                end
-            end)
+            if not Spawner.SpawnIntelligentEnemy() then
+                break
+            end
         end
     end
 end
