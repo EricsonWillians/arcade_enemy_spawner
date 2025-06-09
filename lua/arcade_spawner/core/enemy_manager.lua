@@ -41,9 +41,14 @@ function Manager.CollectWorkshopModels()
     if npcList then
         for className, data in pairs(npcList) do
             if data and data.Model and not Manager.IsVanillaModel(data.Model) then
+                local entInfo = scripted_ents.GetStored(className)
+                local npcClass = className
+                if not entInfo then
+                    npcClass = nil -- treat as generic model if entity not registered
+                end
                 table.insert(workshopModels, {
                     model = data.Model,
-                    npc = className,
+                    npc = npcClass,
                     source = "npc",
                     name = data.Name or className
                 })
@@ -517,8 +522,13 @@ function Manager.BalanceEnemyForWave(enemy, wave)
     end
     
     -- Adjust damage multiplier if too high
-    if enemy.DamageMultiplier and enemy.DamageMultiplier > 3.0 then
-        enemy.DamageMultiplier = math.min(enemy.DamageMultiplier, 1.5 + (wave * 0.1))
+        local entInfo = scripted_ents.GetStored(npcClass)
+        if not entInfo then
+            if list.Get("NPC")[npcClass] then
+                print("[Arcade Spawner] ⚠️ NPC class '" .. npcClass .. "' not registered, using npc_citizen")
+            else
+                print("[Arcade Spawner] ⚠️ Invalid NPC class '" .. npcClass .. "', using npc_citizen")
+            end
         print("[Arcade Spawner] 🔧 Balanced enemy damage multiplier")
     end
 end
