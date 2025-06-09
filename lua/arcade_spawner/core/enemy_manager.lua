@@ -431,6 +431,22 @@ function Manager.ValidateModel(modelPath)
     local success = pcall(function()
         if not util.IsValidModel(modelPath) then error("Invalid model") end
         if not file.Exists(modelPath, "GAME") then error("File not found") end
+
+        local info = util.GetModelInfo(modelPath)
+        if not info or not info.AnimationData or not info.AnimationData.sequences then
+            error("No sequence info")
+        else
+            local hasIdle = false
+            for _, seq in ipairs(info.AnimationData.sequences) do
+                if seq.label and string.find(string.lower(seq.label), "idle") then
+                    hasIdle = true
+                    break
+                end
+            end
+            if not hasIdle then
+                error("Missing idle animation")
+            end
+        end
     end)
     
     if not success then
@@ -581,6 +597,9 @@ function Manager.CreateAdvancedEnemy(pos, wave, forceRarity, attempt)
         -- Validate animation sequences to avoid T-poses
         local idleSeq = enemy:SelectWeightedSequence(ACT_IDLE)
         if idleSeq <= 0 then
+            print("[Arcade Spawner] ⚠️ Missing idle sequence for " .. modelData.model)
+            SafeRemoveEntity(enemy)
+            enemy = nil
             error("Model missing idle sequence")
         end
         
