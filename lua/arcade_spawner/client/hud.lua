@@ -183,6 +183,9 @@ function HUD.InitializeNetworking()
         ["ArcadeSpawner_WaveComplete"] = function()
             local wave = net.ReadInt(16)
             HUD.AddNotification(string.format(">>> WAVE %d COMPLETE <<<", wave), Color(100,255,100), 4)
+            HUD.SessionData.enemiesRemaining = 0
+            HUD.SessionData.currentWave = wave
+            HUD.SessionData.waveCompleteTime = CurTime()
         end,
         
         ["ArcadeSpawner_EnemyKilled"] = function()

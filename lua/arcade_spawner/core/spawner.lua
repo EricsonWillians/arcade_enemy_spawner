@@ -510,14 +510,13 @@ function Spawner.InitializeSpawnSystem()
     
     -- Initial spawn burst
     timer.Simple(2, function()
-        if Spawner.Active then
-            for i = 1, 4 do
-                timer.Simple(i * 0.8, function()
-                    if Spawner.Active and Spawner.WaveEnemiesSpawned < Spawner.WaveEnemiesTarget then
-                        Spawner.SpawnIntelligentEnemy()
-                    end
-                end)
-            end
+        if not Spawner.Active then return end
+        for i = 0, 3 do
+            timer.Simple(i * 0.5, function()
+                if Spawner.Active and Spawner.WaveEnemiesSpawned < Spawner.WaveEnemiesTarget then
+                    Spawner.SpawnIntelligentEnemy()
+                end
+            end)
         end
     end)
 end
@@ -530,11 +529,13 @@ function Spawner.ExecuteSpawnCycle()
     local maxEnemies = GetConVar("arcade_max_enemies"):GetInt()
     local remainingInWave = Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesSpawned
     local currentEnemies = #Spawner.ActiveEnemies
-    
+
     if remainingInWave > 0 and currentEnemies < maxEnemies then
-        local spawnCount = math.min(2, remainingInWave, maxEnemies - currentEnemies)
+        local spawnLeft = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesSpawned)
+        local spawnCount = math.min(2, spawnLeft, maxEnemies - currentEnemies)
 
         for i = 1, spawnCount do
+            if Spawner.WaveEnemiesSpawned >= Spawner.WaveEnemiesTarget then break end
             if not Spawner.SpawnIntelligentEnemy() then
                 break
             end
@@ -845,6 +846,9 @@ hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inf
     if IsValid(npc) and npc.IsArcadeEnemy and Spawner.Active then
         Spawner.EnemiesKilled = Spawner.EnemiesKilled + 1
         Spawner.WaveEnemiesKilled = (Spawner.WaveEnemiesKilled or 0) + 1
+        if Spawner.WaveEnemiesKilled > Spawner.WaveEnemiesTarget then
+            Spawner.WaveEnemiesKilled = Spawner.WaveEnemiesTarget
+        end
         
         -- Handle XP if player killed
         local xp = 30
