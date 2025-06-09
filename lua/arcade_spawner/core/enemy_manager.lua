@@ -393,21 +393,21 @@ function Manager.BuildSafeModelCache()
     
     -- Add vanilla models first
     for _, modelData in ipairs(ArcadeSpawner.Config.SafeNPCModels) do
-        if Manager.ValidateModel(modelData.model) then
-            table.insert(Manager.ValidatedModels, {
-                model = modelData.model,
-                npc = modelData.npc,
-                category = modelData.category,
-                weight = modelData.weight or 1.0,
-                accuracy = modelData.accuracy or 0.70,
-                health = modelData.health or 100,
-                source = "config",
-                validated = true
-            })
-            validCount = validCount + 1
-        else
+        local valid = Manager.ValidateModel(modelData.model)
+        if not valid then
             print("[Arcade Spawner] ⚠️ Invalid vanilla model: " .. modelData.model)
         end
+        table.insert(Manager.ValidatedModels, {
+            model = modelData.model,
+            npc = modelData.npc,
+            category = modelData.category,
+            weight = modelData.weight or 1.0,
+            accuracy = modelData.accuracy or 0.70,
+            health = modelData.health or 100,
+            source = "config",
+            validated = valid
+        })
+        validCount = validCount + 1
     end
     
     -- Add validated workshop models if enabled
@@ -427,32 +427,33 @@ end
 function Manager.ValidateModel(modelPath)
     if not modelPath or modelPath == "" then return false end
     if Manager.BlacklistedModels[modelPath] then return false end
-    
+
     local success = pcall(function()
         if not util.IsValidModel(modelPath) then error("Invalid model") end
         if not file.Exists(modelPath, "GAME") then error("File not found") end
 
-        local info = util.GetModelInfo(modelPath)
-        if not info or not info.AnimationData or not info.AnimationData.sequences then
-            error("No sequence info")
-        else
-            local hasIdle = false
-            for _, seq in ipairs(info.AnimationData.sequences) do
-                if seq.label and string.find(string.lower(seq.label), "idle") then
-                    hasIdle = true
-                    break
-                end
-            end
-            if not hasIdle then
-                error("Missing idle animation")
-            end
+        local testEnt = ents.Create("prop_physics")
+        if not IsValid(testEnt) then error("Failed entity") end
+
+        testEnt:SetModel(modelPath)
+        testEnt:Spawn()
+
+        local idle = testEnt:LookupSequence("idle")
+        if idle < 0 then idle = testEnt:SelectWeightedSequence(ACT_IDLE) end
+        local walk = testEnt:LookupSequence("walk")
+        if walk < 0 then walk = testEnt:SelectWeightedSequence(ACT_WALK) end
+
+        testEnt:Remove()
+
+        if idle < 0 or walk < 0 then
+            error("Missing basic animations")
         end
     end)
-    
+
     if not success then
         Manager.BlacklistedModels[modelPath] = true
     end
-    
+
     return success
 end
 
