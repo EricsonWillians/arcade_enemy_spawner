@@ -516,10 +516,16 @@ function Manager.BalanceEnemyForWave(enemy, wave)
         print("[Arcade Spawner] 🔧 Balanced enemy health: " .. currentHealth .. " -> " .. maxAllowedHealth)
     end
     
-    -- Adjust damage multiplier if too high
-    if enemy.DamageMultiplier and enemy.DamageMultiplier > 3.0 then
-        enemy.DamageMultiplier = math.min(enemy.DamageMultiplier, 1.5 + (wave * 0.1))
-        print("[Arcade Spawner] 🔧 Balanced enemy damage multiplier")
+        -- Create NPC with validation and graceful fallback
+        local npcClass = modelData.npc or "npc_citizen"
+        if not list.Get("NPC")[npcClass] and not scripted_ents.GetStored(npcClass) then
+            print("[Arcade Spawner] ⚠️ Invalid NPC class '" .. tostring(npcClass) .. "', using npc_citizen")
+            npcClass = "npc_citizen"
+        end
+
+        enemy = ents.Create(npcClass)
+        if not IsValid(enemy) then
+            error("Failed to create entity: " .. npcClass)
     end
 end
 
@@ -1206,8 +1212,8 @@ function Manager.CalculateFlankingPosition(enemy, player)
     return nil
 end
 
-function Manager.FindCoverPosition(enemy, player)
-    local enemyPos = enemy:GetPos()
+        local navs = navmesh.Find(ply:GetPos(), 2500, 20, 200, 6000)
+        local offset = VectorRand() * math.random(600, 1400)
     local playerPos = player:GetPos()
     
     -- Find position behind cover
