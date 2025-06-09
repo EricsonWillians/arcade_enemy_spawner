@@ -284,18 +284,28 @@ end
 
 function Manager.CheckRequiredSequences(ent)
     if not IsValid(ent) then return false end
-    
-    local requiredSeqs = ArcadeSpawner.Config.WorkshopValidation.RequiredSequences
-    local foundSequences = 0
-    
-    for _, seqName in ipairs(requiredSeqs) do
-        local seqID = ent:LookupSequence(seqName)
-        if seqID >= 0 then
-            foundSequences = foundSequences + 1
+
+    local idleSeqs = {"idle", "idle_all", "Idle01", "ACT_IDLE"}
+    local moveSeqs = {"walk", "run", "walk_all", "run_all"}
+
+    local hasIdle = false
+    local hasMove = false
+
+    for _, seq in ipairs(idleSeqs) do
+        if ent:LookupSequence(seq) >= 0 then
+            hasIdle = true
+            break
         end
     end
-    
-    return foundSequences >= math.ceil(#requiredSeqs * 0.7) -- Require 70% of sequences
+
+    for _, seq in ipairs(moveSeqs) do
+        if ent:LookupSequence(seq) >= 0 then
+            hasMove = true
+            break
+        end
+    end
+
+    return hasIdle and hasMove
 end
 
 function Manager.DetermineNPCClass(modelData, testResult)
@@ -874,7 +884,8 @@ function Manager.AdvancedAIThink(enemy)
     end
 
     -- Proactively seek players if none spotted recently
-    if not canSeePlayer and CurTime() - (enemy.LastPlayerSeen or 0) > 8 then
+    if not canSeePlayer and CurTime() - (enemy.LastPlayerSeen or 0) > 4 then
+
         enemy.LastPlayerSeen = CurTime()
         local seek = Manager.GetRandomPatrolPoint(enemy)
         if seek then Manager.MoveToPosition(enemy, seek) end
@@ -888,7 +899,7 @@ function Manager.AdvancedAIThink(enemy)
     enemy.LastMoveCheck = enemy.LastMoveCheck or CurTime()
     enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
     if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
-        if CurTime() - enemy.LastMoveCheck > 2 then
+        if CurTime() - enemy.LastMoveCheck > 1.5 then
 
             local patrol = Manager.GetRandomPatrolPoint(enemy)
             if patrol then Manager.MoveToPosition(enemy, patrol) end
@@ -1223,7 +1234,8 @@ function Manager.GetRandomPatrolPoint(enemy)
     local players = player.GetAll()
     if #players > 0 then
         local ply = table.Random(players)
-        local navs = navmesh.Find(ply:GetPos(), 1000, 20, 200, 4000)
+        local navs = navmesh.Find(ply:GetPos(), 2000, 20, 200, 4000)
+
         if navs and #navs > 0 then
             local area = table.Random(navs)
             return area:GetRandomPoint()
@@ -1241,7 +1253,7 @@ function Manager.GetRandomPatrolPoint(enemy)
     end
 
     local offset = Vector(math.random(-800,800), math.random(-800,800), 0)
-  
+
     return enemy:GetPos() + offset
 end
 
