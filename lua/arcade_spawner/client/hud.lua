@@ -179,6 +179,11 @@ function HUD.InitializeNetworking()
             
             print("[Arcade Spawner] 📡 Wave " .. wave .. " started! Target: " .. target)
         end,
+
+        ["ArcadeSpawner_WaveComplete"] = function()
+            local wave = net.ReadInt(16)
+            HUD.AddNotification(string.format(">>> WAVE %d COMPLETE <<<", wave), Color(100,255,100), 4)
+        end,
         
         ["ArcadeSpawner_EnemyKilled"] = function()
             local totalKills = net.ReadInt(32)
