@@ -1173,7 +1173,7 @@ function Manager.GetRandomPatrolPoint(enemy)
         local area = table.Random(areas)
         return area:GetCenter()
     end
-
+  
     local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
     return enemy:GetPos() + offset
 end
