@@ -449,8 +449,8 @@ function HUD.DrawMainInfo(scrW, scrH)
     local boxWidth = 380
     local boxHeight = 160
     
-    draw.RoundedBox(8, padding - 2, padding - 2, boxWidth + 4, boxHeight + 4, Color(100, 150, 255, 30))
-    draw.RoundedBox(6, padding, padding, boxWidth, boxHeight, Color(0, 0, 0, 180))
+    draw.RoundedBox(8, padding - 2, padding - 2, boxWidth + 4, boxHeight + 4, Color(80, 80, 100, 120))
+    draw.RoundedBox(6, padding, padding, boxWidth, boxHeight, Color(10, 10, 20, 200))
     
     local pulse = math.sin(CurTime() * 2) * 0.3 + 0.7
     draw.RoundedBox(8, padding - 2, padding - 2, boxWidth + 4, 2, Color(100, 150, 255, 255 * pulse))
@@ -488,7 +488,7 @@ function HUD.DrawMainInfo(scrW, scrH)
     local progressX = padding + 15
     local progressY = padding + 140
     
-    draw.RoundedBox(4, progressX, progressY, progressWidth, progressHeight, Color(30, 30, 30, 200))
+    draw.RoundedBox(4, progressX, progressY, progressWidth, progressHeight, Color(30, 30, 40, 220))
     
     if HUD.SessionData.enemiesTarget > 0 then
         local progress = 1 - (HUD.SessionData.enemiesRemaining / HUD.SessionData.enemiesTarget)

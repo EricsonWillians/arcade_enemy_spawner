@@ -127,6 +127,7 @@ function Manager.AsyncScanWorkshopModels()
         end
 
         index = index + 1
+
         net.Start("ArcadeSpawner_WorkshopProgress")
         net.WriteInt(math.min(validated + rejected, total), 16)
         net.WriteInt(total, 16)
@@ -870,6 +871,13 @@ function Manager.AdvancedAIThink(enemy)
         enemy.LastPlayerSeen = CurTime()
         enemy.LastKnownPlayerPos = playerPos
     end
+
+    -- Proactively seek players if none spotted recently
+    if not canSeePlayer and CurTime() - (enemy.LastPlayerSeen or 0) > 8 then
+        enemy.LastPlayerSeen = CurTime()
+        local seek = Manager.GetRandomPatrolPoint(enemy)
+        if seek then Manager.MoveToPosition(enemy, seek) end
+    end
     
     -- Squad tactics decision making
     local behavior = Manager.DetermineSquadBehavior(enemy, nearestPlayer, distance, canSeePlayer)
@@ -1213,7 +1221,7 @@ function Manager.GetRandomPatrolPoint(enemy)
     local players = player.GetAll()
     if #players > 0 then
         local ply = table.Random(players)
-        local offset = VectorRand() * math.random(300, 800)
+        local offset = VectorRand() * math.random(500, 1200)
         local pos = ply:GetPos() + offset
         if Manager.IsPositionValid(pos) then return pos end
     end
@@ -1224,7 +1232,9 @@ function Manager.GetRandomPatrolPoint(enemy)
         return area:GetCenter()
     end
 
+    local offset = Vector(math.random(-800,800), math.random(-800,800), 0)
     local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
+
     return enemy:GetPos() + offset
 end
 
