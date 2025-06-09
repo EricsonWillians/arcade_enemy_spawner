@@ -855,6 +855,7 @@ function Manager.AdvancedAIThink(enemy)
     enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
     if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
         if CurTime() - enemy.LastMoveCheck > 3 then
+
             local patrol = Manager.GetRandomPatrolPoint(enemy)
             if patrol then Manager.MoveToPosition(enemy, patrol) end
             enemy.LastMoveCheck = CurTime()
@@ -909,6 +910,7 @@ function Manager.DetermineSquadBehavior(enemy, player, distance, canSeePlayer)
     elseif distance < config.ChaseRadius then
         return "chase"
     elseif enemy.LastKnownPlayerPos and CurTime() - enemy.LastPlayerSeen < 5 then
+
         if enemy.LastKnownPlayerPos == vector_origin then
             return "patrol"
         end
