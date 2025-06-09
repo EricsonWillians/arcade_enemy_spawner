@@ -132,6 +132,7 @@ function Manager.AsyncScanWorkshopModels()
         net.WriteInt(math.min(validated + rejected, total), 16)
         net.WriteInt(total, 16)
         net.Broadcast()
+
     end)
 end
 
@@ -888,6 +889,7 @@ function Manager.AdvancedAIThink(enemy)
     enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
     if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
         if CurTime() - enemy.LastMoveCheck > 2 then
+
             local patrol = Manager.GetRandomPatrolPoint(enemy)
             if patrol then Manager.MoveToPosition(enemy, patrol) end
             enemy.LastMoveCheck = CurTime()
@@ -1226,6 +1228,7 @@ function Manager.GetRandomPatrolPoint(enemy)
             local area = table.Random(navs)
             return area:GetRandomPoint()
         end
+
         local offset = VectorRand() * math.random(500, 1200)
         local pos = ply:GetPos() + offset
         if Manager.IsPositionValid(pos) then return pos end
@@ -1238,6 +1241,7 @@ function Manager.GetRandomPatrolPoint(enemy)
     end
 
     local offset = Vector(math.random(-800,800), math.random(-800,800), 0)
+  
     return enemy:GetPos() + offset
 end
 
