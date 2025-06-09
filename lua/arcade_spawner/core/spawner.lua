@@ -562,7 +562,7 @@ function Spawner.SpawnIntelligentEnemy()
 
     -- Select optimal spawn point
     local spawnPoint = Spawner.SelectOptimalSpawnPoint()
-    if not spawnPoint then
+    if not spawnPoint or Spawner.WaveEnemiesSpawned >= Spawner.WaveEnemiesTarget then
         print("[Arcade Spawner] ⚠️ No available spawn points!")
         return
     end
@@ -583,6 +583,9 @@ function Spawner.SpawnIntelligentEnemy()
     if IsValid(enemy) then
         table.insert(Spawner.ActiveEnemies, enemy)
         Spawner.WaveEnemiesSpawned = Spawner.WaveEnemiesSpawned + 1
+        if Spawner.WaveEnemiesSpawned > Spawner.WaveEnemiesTarget then
+            Spawner.WaveEnemiesSpawned = Spawner.WaveEnemiesTarget
+        end
 
         print("[Arcade Spawner] ✅ Spawned " .. (enemy.RarityType or "Common") ..
               " enemy (" .. Spawner.WaveEnemiesSpawned .. "/" .. Spawner.WaveEnemiesTarget .. ")")
@@ -600,9 +603,13 @@ end
 -- ═══════════════════════════════════════════════════════════════
 function Spawner.ManageWaveProgression()
     if not Spawner.Active then return end
-    
+
     -- ENHANCED: Comprehensive enemy cleanup and counting
     Spawner.CleanupDeadEnemies()
+
+    if Spawner.WaveEnemiesSpawned > Spawner.WaveEnemiesTarget then
+        Spawner.WaveEnemiesSpawned = Spawner.WaveEnemiesTarget
+    end
     
     -- Count ONLY valid, alive enemies
     local aliveEnemies = 0

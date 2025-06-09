@@ -541,10 +541,16 @@ function Manager.CreateAdvancedEnemy(pos, wave, forceRarity, attempt)
             return
         end
         
-        -- Create NPC with error checking
-        enemy = ents.Create(modelData.npc)
-        if not IsValid(enemy) then 
-            error("Failed to create entity: " .. modelData.npc)
+        -- Create NPC with validation and graceful fallback
+        local npcClass = modelData.npc or "npc_citizen"
+        if not list.Get("NPC")[npcClass] and not scripted_ents.GetStored(npcClass) then
+            print("[Arcade Spawner] ⚠️ Invalid NPC class '" .. tostring(npcClass) .. "', using npc_citizen")
+            npcClass = "npc_citizen"
+        end
+
+        enemy = ents.Create(npcClass)
+        if not IsValid(enemy) then
+            error("Failed to create entity: " .. npcClass)
             return
         end
         
@@ -1234,14 +1240,14 @@ function Manager.GetRandomPatrolPoint(enemy)
     local players = player.GetAll()
     if #players > 0 then
         local ply = table.Random(players)
-        local navs = navmesh.Find(ply:GetPos(), 2000, 20, 200, 4000)
+        local navs = navmesh.Find(ply:GetPos(), 2500, 20, 200, 6000)
 
         if navs and #navs > 0 then
             local area = table.Random(navs)
             return area:GetRandomPoint()
         end
+        local offset = VectorRand() * math.random(600, 1400)
 
-        local offset = VectorRand() * math.random(500, 1200)
         local pos = ply:GetPos() + offset
         if Manager.IsPositionValid(pos) then return pos end
     end
