@@ -15,20 +15,13 @@ Manager.ActiveEnemies = {}
 Manager.EnemyStats = {}
 Manager.ValidationInProgress = false
 
--- ═══════════════════════════════════════════════════════════════
--- BULLETPROOF WORKSHOP MODEL VALIDATION SYSTEM
--- ═══════════════════════════════════════════════════════════════
-function Manager.ScanWorkshopModels()
-    if Manager.ValidationInProgress then return end
-    Manager.ValidationInProgress = true
-    
-    print("[Arcade Spawner] 🔍 Scanning workshop models for validation...")
-    
+-- Collect potential workshop models for validation
+function Manager.CollectWorkshopModels()
     local workshopModels = {}
+
     local playerModels = list.Get("PlayerOptionsModel")
     local npcList = list.Get("NPC")
-    
-    -- Scan player models that might be NPCs
+
     if playerModels then
         for _, data in pairs(playerModels) do
             if data and data.Model then
@@ -40,8 +33,7 @@ function Manager.ScanWorkshopModels()
             end
         end
     end
-    
-    -- Scan NPC list for custom models
+
     if npcList then
         for className, data in pairs(npcList) do
             if data and data.Model and not Manager.IsVanillaModel(data.Model) then
@@ -54,7 +46,56 @@ function Manager.ScanWorkshopModels()
             end
         end
     end
+
+    return workshopModels
+end
+
+-- Asynchronous scan to avoid hitches
+function Manager.AsyncScanWorkshopModels()
+    if Manager.ValidationInProgress then return end
+    Manager.ValidationInProgress = true
+
+    print("[Arcade Spawner] 🔍 Async scanning workshop models...")
+
+    local workshopModels = Manager.CollectWorkshopModels()
+    local index = 1
+    local validated, rejected = 0, 0
+
+    timer.Create("ArcadeSpawner_WorkshopScan", 0.1, 0, function()
+        local data = workshopModels[index]
+        if not data then
+            print("[Arcade Spawner] ✅ Workshop validation complete: " .. validated .. " validated, " .. rejected .. " rejected")
+            Manager.ValidationInProgress = false
+            timer.Remove("ArcadeSpawner_WorkshopScan")
+            return
+        end
+
+        if validated < ArcadeSpawner.Config.MaxWorkshopModels then
+            local result = Manager.ValidateWorkshopModel(data)
+            if result.valid then
+                table.insert(Manager.WorkshopModels, result.data)
+                validated = validated + 1
+            else
+                rejected = rejected + 1
+                print("[Arcade Spawner] ❌ Rejected: " .. data.model .. " (" .. result.reason .. ")")
+            end
+        end
+
+        index = index + 1
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- BULLETPROOF WORKSHOP MODEL VALIDATION SYSTEM
+-- ═══════════════════════════════════════════════════════════════
+function Manager.ScanWorkshopModels()
+    if Manager.ValidationInProgress then return end
+    Manager.ValidationInProgress = true
     
+    print("[Arcade Spawner] 🔍 Scanning workshop models for validation...")
+
+    local workshopModels = Manager.CollectWorkshopModels()
+
     print("[Arcade Spawner] 📦 Found " .. #workshopModels .. " potential workshop models")
     
     -- Validate each model
