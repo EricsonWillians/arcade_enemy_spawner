@@ -24,6 +24,7 @@ HUD.DirectionIndicators = {}
 HUD.LastDamageTime = {}
 HUD.MaxTrackerDistance = 4000
 HUD.AmbientSound = nil
+HUD.WorkshopProgress = nil
 
 function HUD.StartAmbience()
     if HUD.AmbientSound or not GetConVar("arcade_creepy_fx"):GetBool() then return end
@@ -216,6 +217,19 @@ function HUD.InitializeNetworking()
             local newLevel = net.ReadInt(16)
             HUD.PlayerData.level = newLevel
             HUD.AddNotification(">>> LEVEL UP! NOW LEVEL " .. newLevel .. " <<<", Color(255, 215, 0), 4)
+        end,
+
+        ["ArcadeSpawner_WorkshopProgress"] = function()
+            local count = net.ReadInt(16)
+            local total = net.ReadInt(16)
+            HUD.WorkshopProgress = {count = count, total = total, timestamp = CurTime()}
+            if count >= total then
+                timer.Simple(2, function()
+                    if HUD.WorkshopProgress and HUD.WorkshopProgress.count >= HUD.WorkshopProgress.total then
+                        HUD.WorkshopProgress = nil
+                    end
+                end)
+            end
         end
     }
     
@@ -663,6 +677,20 @@ function HUD.DrawNotifications(scrW, scrH)
     end
 end
 
+function HUD.DrawWorkshopProgress(scrW, scrH)
+    local prog = HUD.WorkshopProgress
+    if not prog or prog.total == 0 then return end
+
+    local w, h = 300, 18
+    local x, y = scrW / 2 - w / 2, scrH - 60
+    local pct = math.Clamp(prog.count / prog.total, 0, 1)
+
+    draw.RoundedBox(4, x, y, w, h, Color(20, 20, 20, 220))
+    draw.RoundedBox(4, x, y, w * pct, h, Color(100, 200, 255, 220))
+    local txt = string.format("WORKSHOP MODELS %d/%d", prog.count, prog.total)
+    draw.SimpleText(txt, "ArcadeHUD_Small", x + w / 2, y + h / 2, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+end
+
 -- ═══════════════════════════════════════════════════════════════
 -- MAIN HUD HOOK
 -- ═══════════════════════════════════════════════════════════════
@@ -683,6 +711,7 @@ hook.Add("HUDPaint", "ArcadeSpawner_Enhanced_HUD", function()
         HUD.DrawDirectionIndicators(scrW, scrH)
         HUD.DrawHealthArmor(scrW, scrH)
         HUD.DrawNotifications(scrW, scrH)
+        HUD.DrawWorkshopProgress(scrW, scrH)
     end)
     
     if not success then
