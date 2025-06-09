@@ -12,7 +12,8 @@ HUD.SessionData = {
     sessionTime = 0,
     startTime = 0,
     enemiesRemaining = 0,
-    enemiesTarget = 10
+    enemiesTarget = 10,
+    isBossWave = false
 }
 HUD.Notifications = {}
 HUD.FontsCreated = false
@@ -21,6 +22,40 @@ HUD.Initialized = false
 HUD.NetworkInitialized = false
 HUD.DirectionIndicators = {}
 HUD.LastDamageTime = {}
+HUD.MaxTrackerDistance = 4000
+HUD.AmbientSound = nil
+HUD.WorkshopProgress = nil
+
+function HUD.StartAmbience()
+    if HUD.AmbientSound or not GetConVar("arcade_creepy_fx"):GetBool() then return end
+    if not LocalPlayer or not IsValid(LocalPlayer()) then return end
+
+    HUD.AmbientSound = CreateSound(LocalPlayer(), "ambient/halloween/ghosts.wav")
+    if HUD.AmbientSound then
+        HUD.AmbientSound:PlayEx(0.5, 90)
+    end
+
+    ArcadeSpawner.Effects = ArcadeSpawner.Effects or {}
+    ArcadeSpawner.Effects.ScreenEffects.ambience = {
+        effect = {
+            ["$pp_colour_brightness"] = -0.05,
+            ["$pp_colour_contrast"] = 1.1,
+            ["$pp_colour_colour"] = 0.6
+        },
+        endTime = math.huge,
+        fadeTime = 2
+    }
+end
+
+function HUD.StopAmbience()
+    if HUD.AmbientSound then
+        HUD.AmbientSound:Stop()
+        HUD.AmbientSound = nil
+    end
+    if ArcadeSpawner and ArcadeSpawner.Effects and ArcadeSpawner.Effects.ScreenEffects then
+        ArcadeSpawner.Effects.ScreenEffects.ambience = nil
+    end
+end
 
 -- ═══════════════════════════════════════════════════════════════
 -- ENHANCED AUTO-INITIALIZATION SYSTEM
@@ -106,6 +141,7 @@ function HUD.InitializeNetworking()
             HUD.SessionData.currentWave = 1
             HUD.SessionData.enemiesRemaining = net.ReadInt(16) or 10
             HUD.SessionData.enemiesTarget = HUD.SessionData.enemiesRemaining
+            HUD.StartAmbience()
             HUD.AddNotification(">>> ARCADE MODE ACTIVATED <<<", Color(0, 255, 0), 4)
             print("[Arcade Spawner] 📡 Session started! Target: " .. HUD.SessionData.enemiesTarget)
         end,
@@ -114,8 +150,9 @@ function HUD.InitializeNetworking()
             local kills = net.ReadInt(32)
             local wave = net.ReadInt(16)
             local sessionTime = net.ReadInt(16)
-            
+
             HUD.SessionActive = false
+            HUD.StopAmbience()
             
             local minutes = math.floor(sessionTime / 60)
             local seconds = sessionTime % 60
@@ -129,11 +166,12 @@ function HUD.InitializeNetworking()
             local wave = net.ReadInt(16)
             local target = net.ReadInt(16)
             local isBoss = net.ReadBool()
-            
+
             HUD.SessionData.currentWave = wave
             HUD.SessionData.enemiesTarget = target
             HUD.SessionData.enemiesRemaining = target
-            
+            HUD.SessionData.isBossWave = isBoss
+
             if isBoss then
                 HUD.AddNotification(">>> BOSS WAVE " .. wave .. " INCOMING! <<<", Color(255, 50, 50), 5)
             else
@@ -142,16 +180,25 @@ function HUD.InitializeNetworking()
             
             print("[Arcade Spawner] 📡 Wave " .. wave .. " started! Target: " .. target)
         end,
+
+        ["ArcadeSpawner_WaveComplete"] = function()
+            local wave = net.ReadInt(16)
+            HUD.AddNotification(string.format(">>> WAVE %d COMPLETE <<<", wave), Color(100,255,100), 4)
+            HUD.SessionData.enemiesRemaining = 0
+            HUD.SessionData.currentWave = wave
+            HUD.SessionData.waveCompleteTime = CurTime()
+        end,
         
         ["ArcadeSpawner_EnemyKilled"] = function()
             local totalKills = net.ReadInt(32)
             local currentWave = net.ReadInt(16)
             local xp = net.ReadInt(16)
             local isBoss = net.ReadBool()
-            
+            local remaining = net.ReadInt(16)
+
             HUD.SessionData.enemiesKilled = totalKills
             HUD.SessionData.currentWave = currentWave
-            HUD.SessionData.enemiesRemaining = math.max(0, HUD.SessionData.enemiesRemaining - 1)
+            HUD.SessionData.enemiesRemaining = remaining
             
             if isBoss then
                 HUD.AddNotification(">>> BOSS DEFEATED! <<<", Color(255, 215, 0), 3)
@@ -170,6 +217,19 @@ function HUD.InitializeNetworking()
             local newLevel = net.ReadInt(16)
             HUD.PlayerData.level = newLevel
             HUD.AddNotification(">>> LEVEL UP! NOW LEVEL " .. newLevel .. " <<<", Color(255, 215, 0), 4)
+        end,
+
+        ["ArcadeSpawner_WorkshopProgress"] = function()
+            local count = net.ReadInt(16)
+            local total = net.ReadInt(16)
+            HUD.WorkshopProgress = {count = count, total = total, timestamp = CurTime()}
+            if count >= total then
+                timer.Simple(2, function()
+                    if HUD.WorkshopProgress and HUD.WorkshopProgress.count >= HUD.WorkshopProgress.total then
+                        HUD.WorkshopProgress = nil
+                    end
+                end)
+            end
         end
     }
     
@@ -223,7 +283,7 @@ function HUD.UpdateEnemyTracker()
             local enemyPos = ent:GetPos()
             local distance = playerPos:Distance(enemyPos)
             
-            if distance <= 2500 then
+            if distance <= HUD.MaxTrackerDistance then
                 local direction = (enemyPos - playerPos):GetNormalized()
                 local angle = math.deg(math.atan2(direction.y, direction.x))
                 local relativeAngle = angle - playerAng.y
@@ -260,7 +320,7 @@ function HUD.UpdateDirectionIndicators()
         -- Player took damage, find nearest enemy for damage indicator
         if #HUD.EnemyTracker > 0 then
             local closest = HUD.EnemyTracker[1]
-            if closest.distance <= 1500 then
+            if closest.distance <= HUD.MaxTrackerDistance then
                 table.insert(HUD.DirectionIndicators, {
                     angle = closest.angle,
                     type = "damage",
@@ -289,6 +349,20 @@ function HUD.UpdateDirectionIndicators()
                 endTime = currentTime + 0.2
             })
         end
+    end
+
+    -- Always indicate the closest enemy
+    if HUD.EnemyTracker[1] then
+        local nearest = HUD.EnemyTracker[1]
+        table.insert(HUD.DirectionIndicators, {
+            angle = nearest.angle,
+            type = "nearest",
+            intensity = 1.0,
+            distance = nearest.distance,
+            rarity = nearest.rarity,
+            color = HUD.GetRarityColor(nearest.rarity),
+            endTime = currentTime + 0.2
+        })
     end
     
     -- Clean up expired indicators
@@ -384,9 +458,11 @@ function HUD.DrawMainInfo(scrW, scrH)
     draw.SimpleText("=== ARCADE MODE ===", "ArcadeHUD_Title", padding + 15, padding + 15, 
                    Color(255, 255, 255), TEXT_ALIGN_LEFT)
     
-    local waveText = string.format("WAVE: %d", HUD.SessionData.currentWave)
-    draw.SimpleText(waveText, "ArcadeHUD_Medium", padding + 15, padding + 45, 
-                   Color(255, 215, 0), TEXT_ALIGN_LEFT)
+    local waveLabel = HUD.SessionData.isBossWave and "BOSS" or tostring(HUD.SessionData.currentWave)
+    local waveColor = HUD.SessionData.isBossWave and Color(255, 60, 60) or Color(255, 215, 0)
+    local waveText = string.format("WAVE: %s", waveLabel)
+    draw.SimpleText(waveText, "ArcadeHUD_Medium", padding + 15, padding + 45,
+                   waveColor, TEXT_ALIGN_LEFT)
     
     local killText = string.format("KILLS: %d", HUD.SessionData.enemiesKilled)
     draw.SimpleText(killText, "ArcadeHUD_Medium", padding + 15, padding + 70, 
@@ -507,9 +583,14 @@ function HUD.DrawDirectionIndicators(scrW, scrH)
             -- Distance text for close enemies
             if indicator.distance and indicator.distance <= 400 then
                 local distText = string.format("%dm", math.floor(indicator.distance / 50))
-                draw.SimpleText(distText, "ArcadeHUD_Small", x, y + 25, 
+                draw.SimpleText(distText, "ArcadeHUD_Small", x, y + 25,
                                Color(255, 255, 255, alpha * 0.8), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
+        elseif indicator.type == "nearest" then
+            local arrow = HUD.GetDirectionalIndicator(indicator.angle)
+            local nx = centerX + math.cos(rad) * (radius - 30)
+            local ny = centerY + math.sin(rad) * (radius - 30)
+            draw.SimpleText(arrow, "ArcadeHUD_Large", nx, ny, color, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
     end
     
@@ -596,6 +677,20 @@ function HUD.DrawNotifications(scrW, scrH)
     end
 end
 
+function HUD.DrawWorkshopProgress(scrW, scrH)
+    local prog = HUD.WorkshopProgress
+    if not prog or prog.total == 0 then return end
+
+    local w, h = 300, 18
+    local x, y = scrW / 2 - w / 2, scrH - 60
+    local pct = math.Clamp(prog.count / prog.total, 0, 1)
+
+    draw.RoundedBox(4, x, y, w, h, Color(20, 20, 20, 220))
+    draw.RoundedBox(4, x, y, w * pct, h, Color(100, 200, 255, 220))
+    local txt = string.format("WORKSHOP MODELS %d/%d", prog.count, prog.total)
+    draw.SimpleText(txt, "ArcadeHUD_Small", x + w / 2, y + h / 2, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+end
+
 -- ═══════════════════════════════════════════════════════════════
 -- MAIN HUD HOOK
 -- ═══════════════════════════════════════════════════════════════
@@ -616,6 +711,7 @@ hook.Add("HUDPaint", "ArcadeSpawner_Enhanced_HUD", function()
         HUD.DrawDirectionIndicators(scrW, scrH)
         HUD.DrawHealthArmor(scrW, scrH)
         HUD.DrawNotifications(scrW, scrH)
+        HUD.DrawWorkshopProgress(scrW, scrH)
     end)
     
     if not success then
