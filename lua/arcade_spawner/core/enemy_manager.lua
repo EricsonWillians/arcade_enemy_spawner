@@ -1168,12 +1168,6 @@ function Manager.GetRandomPatrolPoint(enemy)
         if Manager.IsPositionValid(pos) then return pos end
     end
 
-    local areas = navmesh.GetAllNavAreas()
-    if areas and #areas > 0 then
-        local area = table.Random(areas)
-        return area:GetCenter()
-    end
-
     local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
     return enemy:GetPos() + offset
 end

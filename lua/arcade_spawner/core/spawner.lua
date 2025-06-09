@@ -657,7 +657,6 @@ end
 function Spawner.HandleWaveComplete()
     local completionTime = CurTime() - (Spawner.WaveStartTime or CurTime())
     Spawner.UpdateDynamicDifficulty(completionTime)
-
     net.Start("ArcadeSpawner_WaveComplete")
     net.WriteInt(Spawner.CurrentWave, 16)
     net.Broadcast()
