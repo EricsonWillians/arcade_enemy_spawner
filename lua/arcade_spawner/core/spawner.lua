@@ -662,7 +662,6 @@ end
 function Spawner.HandleWaveComplete()
     local completionTime = CurTime() - (Spawner.WaveStartTime or CurTime())
     Spawner.UpdateDynamicDifficulty(completionTime)
-
     Spawner.WaveEnemiesRemaining = 0
 
     net.Start("ArcadeSpawner_WaveComplete")
@@ -866,6 +865,7 @@ hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inf
         end
         
         -- FIXED: Notify clients with comprehensive data
+
         local remaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
         Spawner.WaveEnemiesRemaining = remaining
 
