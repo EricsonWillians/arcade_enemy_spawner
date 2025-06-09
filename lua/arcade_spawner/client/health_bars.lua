@@ -62,6 +62,7 @@ local function UpdateEnemyCache()
                 end
                 if maxHealth <= 0 then maxHealth = 100 end
                 maxHealth = math.max(maxHealth, ent:Health(), 1)
+
                 local health = math.Clamp(ent:Health(), 0, maxHealth)
 
                 if health > 0 then
