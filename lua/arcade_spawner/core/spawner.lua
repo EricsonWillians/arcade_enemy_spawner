@@ -562,6 +562,7 @@ end
 
 function Spawner.SpawnIntelligentEnemy()
     if not Spawner.SpawningEnabled then return end
+
     if Spawner.WaveEnemiesSpawned >= Spawner.WaveEnemiesTarget then return end
 
     -- Select optimal spawn point
@@ -915,6 +916,7 @@ hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inf
         end
         
         -- FIXED: Notify clients with comprehensive data
+
         local remaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
         Spawner.WaveEnemiesRemaining = remaining
 
