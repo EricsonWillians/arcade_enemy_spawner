@@ -5,6 +5,10 @@ if not ArcadeSpawner then ArcadeSpawner = {} end
 ArcadeSpawner.EnemyManager = ArcadeSpawner.EnemyManager or {}
 local Manager = ArcadeSpawner.EnemyManager
 
+if SERVER then
+    util.AddNetworkString("ArcadeSpawner_WorkshopProgress")
+end
+
 -- ═══════════════════════════════════════════════════════════════
 -- ENHANCED STATE MANAGEMENT
 -- ═══════════════════════════════════════════════════════════════
@@ -90,6 +94,12 @@ function Manager.AsyncScanWorkshopModels()
     local workshopModels = Manager.CollectWorkshopModels()
     local index = 1
     local validated, rejected = 0, 0
+    local total = #workshopModels
+
+    net.Start("ArcadeSpawner_WorkshopProgress")
+    net.WriteInt(0, 16)
+    net.WriteInt(total, 16)
+    net.Broadcast()
 
     timer.Create("ArcadeSpawner_WorkshopScan", 0.1, 0, function()
         local data = workshopModels[index]
@@ -97,6 +107,11 @@ function Manager.AsyncScanWorkshopModels()
             print("[Arcade Spawner] ✅ Workshop validation complete: " .. validated .. " validated, " .. rejected .. " rejected")
             Manager.ValidationInProgress = false
             timer.Remove("ArcadeSpawner_WorkshopScan")
+
+            net.Start("ArcadeSpawner_WorkshopProgress")
+            net.WriteInt(total, 16)
+            net.WriteInt(total, 16)
+            net.Broadcast()
             return
         end
 
@@ -112,6 +127,11 @@ function Manager.AsyncScanWorkshopModels()
         end
 
         index = index + 1
+        net.Start("ArcadeSpawner_WorkshopProgress")
+        net.WriteInt(math.min(validated + rejected, total), 16)
+        net.WriteInt(total, 16)
+        net.Broadcast()
+
     end)
 end
 
@@ -568,8 +588,8 @@ function Manager.CreateAdvancedEnemy(pos, wave, forceRarity, attempt)
     
     if not success then
         print("[Arcade Spawner] ❌ Enemy creation failed: " .. tostring(errorMsg))
-        if IsValid(enemy) then 
-            SafeRemove(enemy) 
+        if IsValid(enemy) then
+            SafeRemoveEntity(enemy)
             enemy = nil
         end
     end
