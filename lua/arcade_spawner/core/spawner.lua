@@ -16,6 +16,7 @@ Spawner.ActiveEnemies = {}
 Spawner.WaveEnemiesSpawned = 0
 Spawner.WaveEnemiesKilled = 0
 Spawner.WaveEnemiesTarget = 10
+Spawner.WaveEnemiesRemaining = 10
 Spawner.SessionStartTime = 0
 Spawner.LastBossWave = 0
 Spawner.MapBounds = nil
@@ -429,6 +430,7 @@ function ArcadeSpawner.StartSession()
     
     -- Calculate wave target
     Spawner.WaveEnemiesTarget = Spawner.CalculateWaveTarget(1)
+    Spawner.WaveEnemiesRemaining = Spawner.WaveEnemiesTarget
     
     -- Perform map analysis
     local success = Spawner.PerformIntelligentMapAnalysis()
@@ -606,6 +608,7 @@ function Spawner.ManageWaveProgression()
     
     -- FIXED: Accurate remaining calculation
     local enemiesRemaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
+    Spawner.WaveEnemiesRemaining = enemiesRemaining
     
     -- Track enemy count for HUD updates
     if aliveEnemies ~= Spawner.LastAliveCount then
@@ -626,6 +629,7 @@ function Spawner.StartNextWave()
     Spawner.WaveEnemiesSpawned = 0
     Spawner.WaveEnemiesKilled = 0
     Spawner.WaveEnemiesTarget = Spawner.CalculateWaveTarget(Spawner.CurrentWave)
+    Spawner.WaveEnemiesRemaining = Spawner.WaveEnemiesTarget
     Spawner.WaveStartTime = CurTime()
     
     local isBossWave = Spawner.IsBossWave(Spawner.CurrentWave)
@@ -658,6 +662,8 @@ end
 function Spawner.HandleWaveComplete()
     local completionTime = CurTime() - (Spawner.WaveStartTime or CurTime())
     Spawner.UpdateDynamicDifficulty(completionTime)
+
+    Spawner.WaveEnemiesRemaining = 0
 
     net.Start("ArcadeSpawner_WaveComplete")
     net.WriteInt(Spawner.CurrentWave, 16)
@@ -861,6 +867,7 @@ hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inf
         
         -- FIXED: Notify clients with comprehensive data
         local remaining = math.max(0, Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesKilled)
+        Spawner.WaveEnemiesRemaining = remaining
 
         net.Start("ArcadeSpawner_EnemyKilled")
         net.WriteInt(Spawner.EnemiesKilled, 32)        -- Total kills
