@@ -542,12 +542,13 @@ function Manager.ApplyDynamicScaling(enemy, rarity, wave)
     local config = ArcadeSpawner.Config
     local rarityData = config.RaritySystem[rarity] or config.RaritySystem["Common"]
     local waveScaling = config.WaveScaling
+    local difficulty = (ArcadeSpawner.Spawner and ArcadeSpawner.Spawner.DynamicDifficulty) or 1.0
     
     -- Calculate wave multipliers with caps
-    local waveHealthMult = math.min(1 + ((wave - 1) * waveScaling.HealthScale), waveScaling.MaxHealthMultiplier)
-    local waveSpeedMult = math.min(1 + ((wave - 1) * waveScaling.SpeedScale), waveScaling.MaxSpeedMultiplier)
-    local waveAccuracyMult = math.min(1 + ((wave - 1) * waveScaling.AccuracyScale), waveScaling.MaxAccuracyMultiplier)
-    local waveDamageMult = math.min(1 + ((wave - 1) * waveScaling.DamageScale), waveScaling.MaxDamageMultiplier)
+    local waveHealthMult = math.min(1 + ((wave - 1) * waveScaling.HealthScale), waveScaling.MaxHealthMultiplier) * difficulty
+    local waveSpeedMult = math.min(1 + ((wave - 1) * waveScaling.SpeedScale), waveScaling.MaxSpeedMultiplier) * difficulty
+    local waveAccuracyMult = math.min(1 + ((wave - 1) * waveScaling.AccuracyScale), waveScaling.MaxAccuracyMultiplier) * difficulty
+    local waveDamageMult = math.min(1 + ((wave - 1) * waveScaling.DamageScale), waveScaling.MaxDamageMultiplier) * difficulty
     
     pcall(function()
         -- Health scaling with workshop model consideration
@@ -687,7 +688,7 @@ function Manager.SetupEnemyRelationships(enemy)
         
         -- Make ALL arcade enemies neutral to each other
         for _, ent in pairs(ents.GetAll()) do
-            if IsValid(ent) and ent.IsArcadeEnemy and ent != enemy then
+            if IsValid(ent) and ent.IsArcadeEnemy and ent ~= enemy then
                 enemy:AddEntityRelationship(ent, D_NU, 0)
                 ent:AddEntityRelationship(enemy, D_NU, 0)
             end
@@ -722,6 +723,7 @@ function Manager.SetupAdvancedAI(enemy)
         enemy.AimPredictionEnabled = ArcadeSpawner.Config.AISettings.AimPrediction
         enemy.LastPosition = enemy:GetPos()
         enemy.StuckCounter = 0
+        enemy.NextPatrolUpdate = CurTime() + math.Rand(1, 2)
         
         -- Movement speed enhancement
         if enemy.SpeedMultiplier then
@@ -820,8 +822,10 @@ function Manager.DetermineSquadBehavior(enemy, player, distance, canSeePlayer)
         return "seek_cover"
     elseif distance < config.ChaseRadius then
         return "chase"
-    else
+    elseif enemy.LastKnownPlayerPos and CurTime() - enemy.LastPlayerSeen < 10 then
         return "search"
+    else
+        return "patrol"
     end
 end
 
@@ -861,6 +865,14 @@ function Manager.ExecuteAIBehavior(enemy, behavior, player)
                 Manager.MoveToPosition(enemy, enemy.LastKnownPlayerPos)
             else
                 enemy:SetSchedule(SCHED_IDLE_WANDER)
+            end
+        elseif behavior == "patrol" then
+            if not enemy.NextPatrolUpdate or CurTime() >= enemy.NextPatrolUpdate then
+                local patrolPos = Manager.GetRandomPatrolPoint(enemy)
+                if patrolPos then
+                    Manager.MoveToPosition(enemy, patrolPos)
+                end
+                enemy.NextPatrolUpdate = CurTime() + 3
             end
         end
     end)
@@ -1078,6 +1090,16 @@ function Manager.MoveToPosition(enemy, targetPos)
         enemy:SetLastPosition(targetPos)
         enemy:SetSchedule(SCHED_FORCED_GO_RUN)
     end)
+end
+
+function Manager.GetRandomPatrolPoint(enemy)
+    local areas = navmesh.GetAllNavAreas()
+    if areas and #areas > 0 then
+        local area = table.Random(areas)
+        return area:GetCenter()
+    end
+    local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
+    return enemy:GetPos() + offset
 end
 
 function Manager.CheckAndHandleStuck(enemy)

@@ -19,6 +19,8 @@ Spawner.SessionStartTime = 0
 Spawner.LastBossWave = 0
 Spawner.MapBounds = nil
 Spawner.LastPlayerPositions = {}
+Spawner.DynamicDifficulty = 1.0
+Spawner.WaveStartTime = 0
 
 -- Enhanced network strings
 util.AddNetworkString("ArcadeSpawner_SessionStart")
@@ -417,6 +419,8 @@ function ArcadeSpawner.StartSession()
     Spawner.EnemiesKilled = 0
     Spawner.WaveEnemiesSpawned = 0
     Spawner.SessionStartTime = CurTime()
+    Spawner.WaveStartTime = CurTime()
+    Spawner.DynamicDifficulty = 1.0
     Spawner.ActiveEnemies = {}
     Spawner.LastBossWave = 0
     
@@ -565,8 +569,8 @@ function Spawner.SpawnIntelligentEnemy()
     if IsValid(enemy) then
         table.insert(Spawner.ActiveEnemies, enemy)
         Spawner.WaveEnemiesSpawned = Spawner.WaveEnemiesSpawned + 1
-        
-        print("[Arcade Spawner] ✅ Spawned " .. (enemy.RarityType or "Common") .. 
+
+        print("[Arcade Spawner] ✅ Spawned " .. (enemy.RarityType or "Common") ..
               " enemy (" .. Spawner.WaveEnemiesSpawned .. "/" .. Spawner.WaveEnemiesTarget .. ")")
         
         return enemy
@@ -603,17 +607,9 @@ function Spawner.ManageWaveProgression()
     -- FIXED: Accurate remaining calculation
     local enemiesRemaining = math.max(0, (Spawner.WaveEnemiesTarget - Spawner.WaveEnemiesSpawned) + aliveEnemies)
     
-    -- Update HUD with accurate count
-    if aliveEnemies != Spawner.LastAliveCount then
-        net.Start("ArcadeSpawner_EnemyKilled")
-        net.WriteInt(Spawner.EnemiesKilled, 32)
-        net.WriteInt(Spawner.CurrentWave, 16) 
-        net.WriteInt(0, 16) -- XP (will be handled separately)
-        net.WriteBool(false) -- Not boss
-        net.Broadcast()
-        
+    -- Track enemy count for HUD updates
+    if aliveEnemies ~= Spawner.LastAliveCount then
         Spawner.LastAliveCount = aliveEnemies
-        print("[Arcade Spawner] 📡 Enemy killed! Remaining: " .. enemiesRemaining)
     end
     
     -- Check wave completion: all spawned AND all killed
@@ -621,11 +617,7 @@ function Spawner.ManageWaveProgression()
     
     if waveComplete then
         print("[Arcade Spawner] 🌊 Wave " .. Spawner.CurrentWave .. " COMPLETE!")
-        timer.Simple(3, function() -- Longer pause for effect cleanup
-            if Spawner.Active then
-                Spawner.StartNextWave()
-            end
-        end)
+        Spawner.HandleWaveComplete()
     end
 end
 
@@ -633,6 +625,7 @@ function Spawner.StartNextWave()
     Spawner.CurrentWave = Spawner.CurrentWave + 1
     Spawner.WaveEnemiesSpawned = 0
     Spawner.WaveEnemiesTarget = Spawner.CalculateWaveTarget(Spawner.CurrentWave)
+    Spawner.WaveStartTime = CurTime()
     
     local isBossWave = Spawner.IsBossWave(Spawner.CurrentWave)
     
@@ -659,6 +652,29 @@ function Spawner.StartNextWave()
         net.WriteInt(Spawner.CurrentWave, 16)
         net.Broadcast()
     end
+end
+
+function Spawner.HandleWaveComplete()
+    local completionTime = CurTime() - (Spawner.WaveStartTime or CurTime())
+    Spawner.UpdateDynamicDifficulty(completionTime)
+    timer.Simple(3, function()
+        if Spawner.Active then
+            Spawner.StartNextWave()
+        end
+    end)
+end
+
+function Spawner.UpdateDynamicDifficulty(completionTime)
+    local expected = 25 + (Spawner.CurrentWave * 5)
+    local diff = Spawner.DynamicDifficulty or 1.0
+
+    if completionTime < expected * 0.75 then
+        diff = math.min(diff + 0.1, 2.0)
+    elseif completionTime > expected * 1.25 then
+        diff = math.max(diff - 0.05, 0.5)
+    end
+
+    Spawner.DynamicDifficulty = diff
 end
 
 function Spawner.IsBossWave(wave)
@@ -694,11 +710,13 @@ end
 -- UTILITY FUNCTIONS
 -- ═══════════════════════════════════════════════════════════════
 function Spawner.CalculateWaveTarget(wave)
-    local baseEnemies = 10
+    local baseEnemies = 8 + (#player.GetAll() * 2)
     local scalePerWave = 1.4
     local maxEnemies = 80
-    
-    local target = math.floor(baseEnemies + (wave - 1) * scalePerWave)
+
+    local difficulty = Spawner.DynamicDifficulty or 1.0
+
+    local target = math.floor((baseEnemies + (wave - 1) * scalePerWave) * difficulty)
     return math.min(target, maxEnemies)
 end
 
