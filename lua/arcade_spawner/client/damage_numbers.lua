@@ -46,8 +46,8 @@ hook.Add("HUDPaint", "ArcadeSpawner_DrawDamageNumbers", function()
     for _, d in ipairs(DamageNumbers.Active) do
         local screen = d.pos:ToScreen()
         if screen.visible ~= false then
-            draw.SimpleTextOutlined(d.text, "ArcadeHUD_Small", screen.x, screen.y,
-                Color(255, 80, 80, d.alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 1, Color(0,0,0,d.alpha))
+            draw.SimpleTextOutlined(d.text, "ArcadeHUD_Large", screen.x, screen.y,
+                Color(255, 80, 80, d.alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 2, Color(0,0,0,d.alpha))
         end
     end
 end)

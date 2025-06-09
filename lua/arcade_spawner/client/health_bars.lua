@@ -176,7 +176,7 @@ local function DrawHealthBar(enemyData)
 
     -- Hitpoint text
     local hpText = string.format("%d/%d", enemyData.health, enemyData.maxHealth)
-    draw.SimpleText(hpText, "ArcadeHUD_Small", x + w / 2, y - 8,
+    draw.SimpleText(hpText, "ArcadeHUD_Large", x + w / 2, y - 12,
                    Color(255, 255, 255, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
     
     -- Damage indicators (optional)

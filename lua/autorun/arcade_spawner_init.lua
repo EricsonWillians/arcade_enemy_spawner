@@ -194,10 +194,21 @@ if SERVER then
     
     concommand.Add("arcade_validate_workshop", function(ply, cmd, args)
         if IsValid(ply) and not ply:IsAdmin() then return end
-        
-        if ArcadeSpawner.EnemyManager and ArcadeSpawner.EnemyManager.ScanWorkshopModels then
-            local count = ArcadeSpawner.EnemyManager.ScanWorkshopModels()
-            local msg = "🔍 Workshop scan complete: " .. count .. " models validated"
+
+        if ArcadeSpawner.EnemyManager and ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels then
+            ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels()
+            local msg = "🔍 Workshop scan started"
+            print("[Arcade Spawner] " .. msg)
+            if IsValid(ply) then ply:ChatPrint("[Arcade Spawner] " .. msg) end
+        end
+    end)
+
+    concommand.Add("arcade_rescan_models", function(ply, cmd, args)
+        if IsValid(ply) and not ply:IsAdmin() then return end
+
+        if ArcadeSpawner.EnemyManager and ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels then
+            ArcadeSpawner.EnemyManager.AsyncScanWorkshopModels()
+            local msg = "🔍 Workshop rescan started"
             print("[Arcade Spawner] " .. msg)
             if IsValid(ply) then ply:ChatPrint("[Arcade Spawner] " .. msg) end
         end
