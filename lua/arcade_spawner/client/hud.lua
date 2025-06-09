@@ -186,7 +186,6 @@ function HUD.InitializeNetworking()
             HUD.SessionData.enemiesRemaining = 0
             HUD.SessionData.currentWave = wave
             HUD.SessionData.waveCompleteTime = CurTime()
-
         end,
         
         ["ArcadeSpawner_EnemyKilled"] = function()

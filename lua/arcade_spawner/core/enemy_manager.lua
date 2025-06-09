@@ -48,12 +48,14 @@ function Manager.CollectWorkshopModels()
     end
 
     -- Recursively search the models folder for additional .mdl files
+    local maxModels = ArcadeSpawner.Config.MaxWorkshopModels or 100
     local function AddModelsFromPath(path, depth)
         depth = depth or 0
-        if depth > 5 then return end
+        if depth > 5 or #workshopModels >= maxModels then return end
 
         local files, dirs = file.Find(path .. "*.mdl", "GAME")
         for _, f in ipairs(files) do
+            if #workshopModels >= maxModels then return end
             local modelPath = path .. f
             if not Manager.IsVanillaModel(modelPath) then
                 table.insert(workshopModels, {
@@ -66,7 +68,10 @@ function Manager.CollectWorkshopModels()
 
         local _, subdirs = file.Find(path .. "*", "GAME")
         for _, d in ipairs(subdirs) do
-            AddModelsFromPath(path .. d .. "/", depth + 1)
+            if d ~= "." and d ~= ".." then
+                AddModelsFromPath(path .. d .. "/", depth + 1)
+                if #workshopModels >= maxModels then return end
+            end
         end
     end
 
@@ -855,7 +860,6 @@ function Manager.AdvancedAIThink(enemy)
     enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
     if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
         if CurTime() - enemy.LastMoveCheck > 3 then
-
             local patrol = Manager.GetRandomPatrolPoint(enemy)
             if patrol then Manager.MoveToPosition(enemy, patrol) end
             enemy.LastMoveCheck = CurTime()
@@ -910,7 +914,6 @@ function Manager.DetermineSquadBehavior(enemy, player, distance, canSeePlayer)
     elseif distance < config.ChaseRadius then
         return "chase"
     elseif enemy.LastKnownPlayerPos and CurTime() - enemy.LastPlayerSeen < 5 then
-
         if enemy.LastKnownPlayerPos == vector_origin then
             return "patrol"
         end
