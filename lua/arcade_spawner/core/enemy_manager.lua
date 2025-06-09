@@ -15,20 +15,13 @@ Manager.ActiveEnemies = {}
 Manager.EnemyStats = {}
 Manager.ValidationInProgress = false
 
--- ═══════════════════════════════════════════════════════════════
--- BULLETPROOF WORKSHOP MODEL VALIDATION SYSTEM
--- ═══════════════════════════════════════════════════════════════
-function Manager.ScanWorkshopModels()
-    if Manager.ValidationInProgress then return end
-    Manager.ValidationInProgress = true
-    
-    print("[Arcade Spawner] 🔍 Scanning workshop models for validation...")
-    
+-- Collect potential workshop models for validation
+function Manager.CollectWorkshopModels()
     local workshopModels = {}
+
     local playerModels = list.Get("PlayerOptionsModel")
     local npcList = list.Get("NPC")
-    
-    -- Scan player models that might be NPCs
+
     if playerModels then
         for _, data in pairs(playerModels) do
             if data and data.Model then
@@ -40,8 +33,7 @@ function Manager.ScanWorkshopModels()
             end
         end
     end
-    
-    -- Scan NPC list for custom models
+
     if npcList then
         for className, data in pairs(npcList) do
             if data and data.Model and not Manager.IsVanillaModel(data.Model) then
@@ -54,7 +46,56 @@ function Manager.ScanWorkshopModels()
             end
         end
     end
+
+    return workshopModels
+end
+
+-- Asynchronous scan to avoid hitches
+function Manager.AsyncScanWorkshopModels()
+    if Manager.ValidationInProgress then return end
+    Manager.ValidationInProgress = true
+
+    print("[Arcade Spawner] 🔍 Async scanning workshop models...")
+
+    local workshopModels = Manager.CollectWorkshopModels()
+    local index = 1
+    local validated, rejected = 0, 0
+
+    timer.Create("ArcadeSpawner_WorkshopScan", 0.1, 0, function()
+        local data = workshopModels[index]
+        if not data then
+            print("[Arcade Spawner] ✅ Workshop validation complete: " .. validated .. " validated, " .. rejected .. " rejected")
+            Manager.ValidationInProgress = false
+            timer.Remove("ArcadeSpawner_WorkshopScan")
+            return
+        end
+
+        if validated < ArcadeSpawner.Config.MaxWorkshopModels then
+            local result = Manager.ValidateWorkshopModel(data)
+            if result.valid then
+                table.insert(Manager.WorkshopModels, result.data)
+                validated = validated + 1
+            else
+                rejected = rejected + 1
+                print("[Arcade Spawner] ❌ Rejected: " .. data.model .. " (" .. result.reason .. ")")
+            end
+        end
+
+        index = index + 1
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- BULLETPROOF WORKSHOP MODEL VALIDATION SYSTEM
+-- ═══════════════════════════════════════════════════════════════
+function Manager.ScanWorkshopModels()
+    if Manager.ValidationInProgress then return end
+    Manager.ValidationInProgress = true
     
+    print("[Arcade Spawner] 🔍 Scanning workshop models for validation...")
+
+    local workshopModels = Manager.CollectWorkshopModels()
+
     print("[Arcade Spawner] 📦 Found " .. #workshopModels .. " potential workshop models")
     
     -- Validate each model
@@ -542,12 +583,13 @@ function Manager.ApplyDynamicScaling(enemy, rarity, wave)
     local config = ArcadeSpawner.Config
     local rarityData = config.RaritySystem[rarity] or config.RaritySystem["Common"]
     local waveScaling = config.WaveScaling
+    local difficulty = (ArcadeSpawner.Spawner and ArcadeSpawner.Spawner.DynamicDifficulty) or 1.0
     
     -- Calculate wave multipliers with caps
-    local waveHealthMult = math.min(1 + ((wave - 1) * waveScaling.HealthScale), waveScaling.MaxHealthMultiplier)
-    local waveSpeedMult = math.min(1 + ((wave - 1) * waveScaling.SpeedScale), waveScaling.MaxSpeedMultiplier)
-    local waveAccuracyMult = math.min(1 + ((wave - 1) * waveScaling.AccuracyScale), waveScaling.MaxAccuracyMultiplier)
-    local waveDamageMult = math.min(1 + ((wave - 1) * waveScaling.DamageScale), waveScaling.MaxDamageMultiplier)
+    local waveHealthMult = math.min(1 + ((wave - 1) * waveScaling.HealthScale), waveScaling.MaxHealthMultiplier) * difficulty
+    local waveSpeedMult = math.min(1 + ((wave - 1) * waveScaling.SpeedScale), waveScaling.MaxSpeedMultiplier) * difficulty
+    local waveAccuracyMult = math.min(1 + ((wave - 1) * waveScaling.AccuracyScale), waveScaling.MaxAccuracyMultiplier) * difficulty
+    local waveDamageMult = math.min(1 + ((wave - 1) * waveScaling.DamageScale), waveScaling.MaxDamageMultiplier) * difficulty
     
     pcall(function()
         -- Health scaling with workshop model consideration
@@ -687,7 +729,7 @@ function Manager.SetupEnemyRelationships(enemy)
         
         -- Make ALL arcade enemies neutral to each other
         for _, ent in pairs(ents.GetAll()) do
-            if IsValid(ent) and ent.IsArcadeEnemy and ent != enemy then
+            if IsValid(ent) and ent.IsArcadeEnemy and ent ~= enemy then
                 enemy:AddEntityRelationship(ent, D_NU, 0)
                 ent:AddEntityRelationship(enemy, D_NU, 0)
             end
@@ -722,6 +764,7 @@ function Manager.SetupAdvancedAI(enemy)
         enemy.AimPredictionEnabled = ArcadeSpawner.Config.AISettings.AimPrediction
         enemy.LastPosition = enemy:GetPos()
         enemy.StuckCounter = 0
+        enemy.NextPatrolUpdate = CurTime() + math.Rand(1, 2)
         
         -- Movement speed enhancement
         if enemy.SpeedMultiplier then
@@ -820,8 +863,13 @@ function Manager.DetermineSquadBehavior(enemy, player, distance, canSeePlayer)
         return "seek_cover"
     elseif distance < config.ChaseRadius then
         return "chase"
-    else
+    elseif enemy.LastKnownPlayerPos and CurTime() - enemy.LastPlayerSeen < 10 then
+        if enemy.LastKnownPlayerPos == vector_origin then
+            return "patrol"
+        end
         return "search"
+    else
+        return "patrol"
     end
 end
 
@@ -857,10 +905,18 @@ function Manager.ExecuteAIBehavior(enemy, behavior, player)
             enemy:SetSchedule(SCHED_CHASE_ENEMY)
             
         elseif behavior == "search" then
-            if enemy.LastKnownPlayerPos then
+            if enemy.LastKnownPlayerPos and enemy.LastKnownPlayerPos ~= vector_origin then
                 Manager.MoveToPosition(enemy, enemy.LastKnownPlayerPos)
             else
                 enemy:SetSchedule(SCHED_IDLE_WANDER)
+            end
+        elseif behavior == "patrol" then
+            if not enemy.NextPatrolUpdate or CurTime() >= enemy.NextPatrolUpdate then
+                local patrolPos = Manager.GetRandomPatrolPoint(enemy)
+                if patrolPos then
+                    Manager.MoveToPosition(enemy, patrolPos)
+                end
+                enemy.NextPatrolUpdate = CurTime() + 3
             end
         end
     end)
@@ -1078,6 +1134,16 @@ function Manager.MoveToPosition(enemy, targetPos)
         enemy:SetLastPosition(targetPos)
         enemy:SetSchedule(SCHED_FORCED_GO_RUN)
     end)
+end
+
+function Manager.GetRandomPatrolPoint(enemy)
+    local areas = navmesh.GetAllNavAreas()
+    if areas and #areas > 0 then
+        local area = table.Random(areas)
+        return area:GetCenter()
+    end
+    local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
+    return enemy:GetPos() + offset
 end
 
 function Manager.CheckAndHandleStuck(enemy)
