@@ -367,36 +367,37 @@ function Manager.IsVanillaModel(model)
         "models/combine_super_soldier.mdl",
         "models/police.mdl",
         "models/barney.mdl",
-        "models/alyx.mdl",
-        "models/zombie/classic.mdl",
-        "models/zombie/fast.mdl",
-        "models/zombie/poison.mdl",
-        "models/antlion.mdl",
-        "models/antlion_guard.mdl"
-    }
-    
-    return table.HasValue(vanillaModels, model)
-end
+        local valid = Manager.ValidateModel(modelData.model)
+        if not valid then
+        table.insert(Manager.ValidatedModels, {
+            model = modelData.model,
+            npc = modelData.npc,
+            category = modelData.category,
+            weight = modelData.weight or 1.0,
+            accuracy = modelData.accuracy or 0.70,
+            health = modelData.health or 100,
+            source = "config",
+            validated = valid
+        })
+        validCount = validCount + 1
 
--- ═══════════════════════════════════════════════════════════════
--- ENHANCED MODEL CACHE BUILDING
--- ═══════════════════════════════════════════════════════════════
-function Manager.BuildSafeModelCache()
-    Manager.ValidatedModels = {}
-    
-    if not ArcadeSpawner.Config or not ArcadeSpawner.Config.SafeNPCModels then
-        print("[Arcade Spawner] ❌ Config not available for model validation!")
-        return false
-    end
-    
-    local validCount = 0
-    
-    -- Add vanilla models first
-    for _, modelData in ipairs(ArcadeSpawner.Config.SafeNPCModels) do
-        if Manager.ValidateModel(modelData.model) then
-            table.insert(Manager.ValidatedModels, {
-                model = modelData.model,
-                npc = modelData.npc,
+        local testEnt = ents.Create("prop_physics")
+        if not IsValid(testEnt) then error("Failed entity") end
+
+        testEnt:SetModel(modelPath)
+        testEnt:Spawn()
+
+        local idle = testEnt:LookupSequence("idle")
+        if idle < 0 then idle = testEnt:SelectWeightedSequence(ACT_IDLE) end
+        local walk = testEnt:LookupSequence("walk")
+        if walk < 0 then walk = testEnt:SelectWeightedSequence(ACT_WALK) end
+
+        testEnt:Remove()
+
+        if idle < 0 or walk < 0 then
+            error("Missing basic animations")
+
+
                 category = modelData.category,
                 weight = modelData.weight or 1.0,
                 accuracy = modelData.accuracy or 0.70,
