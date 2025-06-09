@@ -137,6 +137,7 @@ function Manager.AsyncScanWorkshopModels()
         net.WriteInt(math.min(validated + rejected, total), 16)
         net.WriteInt(total, 16)
         net.Broadcast()
+
     end)
 end
 
@@ -1267,11 +1268,13 @@ function Manager.GetRandomPatrolPoint(enemy)
     if #players > 0 then
         local ply = table.Random(players)
         local navs = navmesh.Find(ply:GetPos(), 2500, 20, 200, 6000)
+
         if navs and #navs > 0 then
             local area = table.Random(navs)
             return area:GetRandomPoint()
         end
         local offset = VectorRand() * math.random(600, 1400)
+
         local pos = ply:GetPos() + offset
         if Manager.IsPositionValid(pos) then return pos end
     end
@@ -1283,6 +1286,7 @@ function Manager.GetRandomPatrolPoint(enemy)
     end
 
     local offset = Vector(math.random(-800,800), math.random(-800,800), 0)
+
     return enemy:GetPos() + offset
 end
 
