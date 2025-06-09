@@ -53,8 +53,8 @@ local function CreateSafeEmitter(pos, maxParticles)
     
     local success, emitter = pcall(ParticleEmitter, pos)
     if success and emitter then
+        -- Only SetNearClip is available on the emitter
         emitter:SetNearClip(24, 32)
-        emitter:SetFarClip(1000, 1200)
         
         -- Auto-cleanup
         timer.Simple(5, function()
@@ -431,7 +431,7 @@ hook.Add("PostDrawOpaqueRenderables", "ArcadeSpawner_EnhancedGlow", function()
         local currentTime = CurTime()
         
         for _, ent in ipairs(ents.GetAll()) do
-            if IsValid(ent) and ent.IsArcadeEnemy and ent.RarityType and ent.RarityType != "Common" then
+            if IsValid(ent) and ent.IsArcadeEnemy and ent.RarityType and ent.RarityType ~= "Common" then
                 local glowColors = {
                     ["Uncommon"] = {color = Color(30, 255, 30), intensity = 15},
                     ["Rare"] = {color = Color(30, 144, 255), intensity = 25},
