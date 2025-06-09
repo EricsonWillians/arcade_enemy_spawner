@@ -633,6 +633,7 @@ end
 
 -- ═══════════════════════════════════════════════════════════════
 -- DYNAMIC DIFFICULTY SCALING SYSTEM
+        enemy:SetNWInt("ArcadeMaxHP", finalHealth)
 -- ═══════════════════════════════════════════════════════════════
 function Manager.ApplyDynamicScaling(enemy, rarity, wave)
     if not IsValid(enemy) or not ArcadeSpawner.Config then return end
@@ -861,7 +862,7 @@ function Manager.AdvancedAIThink(enemy)
     if not IsValid(nearestPlayer) then return end
     
     local enemyPos = enemy:GetPos()
-    local playerPos = nearestPlayer:GetPos()
+        if CurTime() - enemy.LastMoveCheck > 2 then
     local distance = enemyPos:Distance(playerPos)
     
     -- Check if enemy can see player
@@ -1195,6 +1196,11 @@ end
 
 function Manager.FindCoverPosition(enemy, player)
     local enemyPos = enemy:GetPos()
+        local navs = navmesh.Find(ply:GetPos(), 1000, 20, 200, 4000)
+        if navs and #navs > 0 then
+            local area = table.Random(navs)
+            return area:GetRandomPoint()
+        end
     local playerPos = player:GetPos()
     
     -- Find position behind cover
