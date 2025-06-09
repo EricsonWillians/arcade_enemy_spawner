@@ -47,6 +47,31 @@ function Manager.CollectWorkshopModels()
         end
     end
 
+    -- Recursively search the models folder for additional .mdl files
+    local function AddModelsFromPath(path, depth)
+        depth = depth or 0
+        if depth > 5 then return end
+
+        local files, dirs = file.Find(path .. "*.mdl", "GAME")
+        for _, f in ipairs(files) do
+            local modelPath = path .. f
+            if not Manager.IsVanillaModel(modelPath) then
+                table.insert(workshopModels, {
+                    model = modelPath,
+                    source = "filesystem",
+                    name = modelPath
+                })
+            end
+        end
+
+        local _, subdirs = file.Find(path .. "*", "GAME")
+        for _, d in ipairs(subdirs) do
+            AddModelsFromPath(path .. d .. "/", depth + 1)
+        end
+    end
+
+    AddModelsFromPath("models/")
+
     return workshopModels
 end
 
@@ -829,7 +854,8 @@ function Manager.AdvancedAIThink(enemy)
     enemy.LastMoveCheck = enemy.LastMoveCheck or CurTime()
     enemy.LastCheckedPos = enemy.LastCheckedPos or enemyPos
     if enemy:GetPos():Distance(enemy.LastCheckedPos) < 10 then
-        if CurTime() - enemy.LastMoveCheck > 5 then
+        if CurTime() - enemy.LastMoveCheck > 3 then
+
             local patrol = Manager.GetRandomPatrolPoint(enemy)
             if patrol then Manager.MoveToPosition(enemy, patrol) end
             enemy.LastMoveCheck = CurTime()
@@ -883,7 +909,8 @@ function Manager.DetermineSquadBehavior(enemy, player, distance, canSeePlayer)
         return "seek_cover"
     elseif distance < config.ChaseRadius then
         return "chase"
-    elseif enemy.LastKnownPlayerPos and CurTime() - enemy.LastPlayerSeen < 10 then
+    elseif enemy.LastKnownPlayerPos and CurTime() - enemy.LastPlayerSeen < 5 then
+
         if enemy.LastKnownPlayerPos == vector_origin then
             return "patrol"
         end
@@ -1173,7 +1200,7 @@ function Manager.GetRandomPatrolPoint(enemy)
         local area = table.Random(areas)
         return area:GetCenter()
     end
-  
+
     local offset = Vector(math.random(-500,500), math.random(-500,500), 0)
     return enemy:GetPos() + offset
 end
