@@ -62,6 +62,7 @@ local function UpdateEnemyCache()
                 end
                 if maxHealth <= 0 then maxHealth = 100 end
                 maxHealth = math.max(maxHealth, ent:Health(), 1)
+
                 local health = math.Clamp(ent:Health(), 0, maxHealth)
 
                 if health > 0 then
@@ -182,6 +183,7 @@ local function DrawHealthBar(enemyData)
     -- Hitpoint text
     local hpText = string.format("%d/%d", enemyData.health, enemyData.maxHealth)
     draw.SimpleText(hpText, "ArcadeHUD_Large", x + w / 2, y - 15,
+
                    Color(255, 255, 255, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
     
     -- Damage indicators (optional)
