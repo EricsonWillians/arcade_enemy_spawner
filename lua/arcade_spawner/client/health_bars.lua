@@ -56,16 +56,21 @@ local function UpdateEnemyCache()
             local distance = playerPos:Distance(ent:GetPos())
             
             if distance <= HEALTH_BAR_CONFIG.maxDistance then
-                local health = ent:Health()
-                local maxHealth = ent:GetMaxHealth()
-                
-                if health > 0 and maxHealth > 0 then
+                local maxHealth = ent:GetNWInt("ArcadeMaxHP", ent:GetMaxHealth())
+                if maxHealth <= 0 then
+                    maxHealth = ent:GetMaxHealth()
+                end
+                if maxHealth <= 0 then maxHealth = 100 end
+                maxHealth = math.max(maxHealth, ent:Health(), 1)
+                local health = math.Clamp(ent:Health(), 0, maxHealth)
+
+                if health > 0 then
                     table.insert(HealthBars.EnemyCache, {
                         entity = ent,
                         distance = distance,
                         health = health,
                         maxHealth = maxHealth,
-                        healthPercent = health / maxHealth,
+                        healthPercent = math.Clamp(health / maxHealth, 0, 1),
                         rarity = ent.RarityType or "Common",
                         position = ent:GetPos() + HEALTH_BAR_CONFIG.offset
                     })
@@ -109,7 +114,7 @@ local function DrawHealthBar(enemyData)
     local pos = enemyData.position
     local screenPos = pos:ToScreen()
     
-    if not screenPos.visible then return end
+    if screenPos.visible == false then return end
     
     local distance = enemyData.distance
     local alpha = 255
@@ -168,11 +173,16 @@ local function DrawHealthBar(enemyData)
     end
     
     -- Rarity indicator stripe
-    if rarity != "Common" then
+    if rarity ~= "Common" then
         local rarityColor = GetRarityColor(rarity)
         rarityColor.a = alpha * 0.8
         draw.RoundedBox(0, x, y - 3, w, 2, rarityColor)
     end
+
+    -- Hitpoint text
+    local hpText = string.format("%d/%d", enemyData.health, enemyData.maxHealth)
+    draw.SimpleText(hpText, "ArcadeHUD_Large", x + w / 2, y - 15,
+                   Color(255, 255, 255, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
     
     -- Damage indicators (optional)
     if enemyData.healthPercent < 0.3 then
@@ -188,10 +198,6 @@ hook.Add("HUDPaint", "ArcadeSpawner_HealthBars", function()
     UpdateEnemyCache()
     
     if #HealthBars.EnemyCache == 0 then return end
-    
-    -- Set up 3D context
-    cam.Start3D()
-    cam.End3D()
     
     -- Draw all health bars
     for _, enemyData in ipairs(HealthBars.EnemyCache) do

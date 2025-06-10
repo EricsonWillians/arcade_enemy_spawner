@@ -158,7 +158,7 @@ function Pathfinding.BuildNavMesh()
     local connectionRadius = resolution * 1.5
     for key1, node1 in pairs(Pathfinding.NavMesh) do
         for key2, node2 in pairs(Pathfinding.NavMesh) do
-            if key1 != key2 then
+            if key1 ~= key2 then
                 local dist = node1.pos:Distance(node2.pos)
                 if dist <= connectionRadius then
                     -- Check line of sight
