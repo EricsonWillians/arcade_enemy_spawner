@@ -901,9 +901,11 @@ end
 hook.Add("OnNPCKilled", "ArcadeSpawner_EnemyKilled", function(npc, attacker, inflictor)
     if IsValid(npc) and npc.IsArcadeEnemy and Spawner.Active then
         Spawner.EnemiesKilled = Spawner.EnemiesKilled + 1
-        Spawner.WaveEnemiesKilled = (Spawner.WaveEnemiesKilled or 0) + 1
-        if Spawner.WaveEnemiesKilled > Spawner.WaveEnemiesTarget then
-            Spawner.WaveEnemiesKilled = Spawner.WaveEnemiesTarget
+        if Spawner.WaveEnemiesKilled < Spawner.WaveEnemiesTarget then
+            Spawner.WaveEnemiesKilled = Spawner.WaveEnemiesKilled + 1
+            if Spawner.WaveEnemiesKilled > Spawner.WaveEnemiesTarget then
+                Spawner.WaveEnemiesKilled = Spawner.WaveEnemiesTarget
+            end
         end
         
         -- Handle XP if player killed

@@ -810,7 +810,6 @@ function Manager.EnhanceEnemyCombat(enemy)
         
         -- Force player targeting
         enemy:AddRelationship("player D_HT 99")
-        enemy:AddRelationship("npc_* D_NU 0") -- Neutral to other NPCs
         
         print("[Arcade Spawner] ⚡ Enhanced combat for " .. (enemy.RarityType or "Common") .. " enemy")
     end)
@@ -1287,7 +1286,7 @@ function Manager.GetRandomPatrolPoint(enemy)
     end
 
     local offset = Vector(math.random(-800,800), math.random(-800,800), 0)
-
+  
     return enemy:GetPos() + offset
 end
 

@@ -99,7 +99,7 @@ function HUD.CreateASCIIFonts()
     
     local fonts = {
         {"ArcadeHUD_Title", {font = "Courier New", size = 24, weight = 800, antialias = true, shadow = true}},
-        {"ArcadeHUD_Large", {font = "Courier New", size = 20, weight = 700, antialias = true, shadow = true}},
+        {"ArcadeHUD_Large", {font = "Courier New", size = 24, weight = 700, antialias = true, shadow = true}},
         {"ArcadeHUD_Medium", {font = "Courier New", size = 16, weight = 600, antialias = true, shadow = true}},
         {"ArcadeHUD_Small", {font = "Courier New", size = 14, weight = 500, antialias = true}},
         {"ArcadeHUD_Mono", {font = "Courier New", size = 12, weight = 400, antialias = false}},
